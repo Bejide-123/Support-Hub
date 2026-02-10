@@ -1,9 +1,18 @@
-import React from 'react'
+
+import HeroSection from './components/Hero';
+import KnowledgeBaseSection from './components/KnowledgeBase';
+import FAQSection from './components/FAQsection';
+import ContactSection from './components/Contact';
+import Footer from './components/Footer';
 
 const App = () => {
   return (
     <div>
-      <h1 className='text-red-500'>Hello World</h1>
+      <HeroSection />
+      <KnowledgeBaseSection />
+      <FAQSection />
+      <ContactSection />
+      <Footer />
     </div>
   )
 }
