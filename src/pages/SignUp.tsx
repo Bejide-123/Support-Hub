@@ -1,30 +1,32 @@
-// pages/SignupPage.tsx
-import { useState } from 'react';
+// src/pages/SignupPage.tsx
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  Mail,
-  Lock,
-  User,
-  Eye,
-  EyeOff,
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { signup, clearError } from '../features/Auth/authSlice';
+import { 
+  Mail, 
+  Lock, 
+  User, 
+  Eye, 
+  EyeOff, 
   AlertCircle,
-  Check,
+  MessageSquare,
+  Briefcase,
   ArrowLeft,
+  Check,
   Github,
   Twitter,
-  Facebook,
-  MessageSquare,
-  Briefcase
+  Facebook
 } from 'lucide-react';
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { isLoading, error, user } = useAppSelector((state) => state.auth);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -32,35 +34,47 @@ const SignupPage = () => {
     password: '',
     confirmPassword: ''
   });
+  const [validationError, setValidationError] = useState('');
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'agent') {
+        navigate('/agent/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [user, navigate]);
+
+  // Clear error when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setValidationError('');
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setValidationError('Passwords do not match');
       return;
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setValidationError('Password must be at least 8 characters');
       return;
     }
 
     if (!agreedToTerms) {
-      setError('Please agree to the terms of service');
+      setValidationError('Please agree to the terms of service');
       return;
     }
 
-    setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // Mock successful signup - redirect to login
-      navigate('/login');
-    }, 1500);
+    dispatch(signup(formData));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,10 +108,10 @@ const SignupPage = () => {
   const passwordStrength = getPasswordStrength();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
       
       {/* Background Pattern */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-teal-200 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
       </div>
@@ -105,20 +119,22 @@ const SignupPage = () => {
       <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
         
         {/* Back to Home */}
-        <Link to="/" className="flex items-center text-gray-600 hover:text-emerald-600 mb-6 transition-colors">
-          <ArrowLeft size={16} className="mr-2" />
+        <Link to="/" className="flex items-center text-gray-600 hover:text-emerald-600 mb-6 transition-colors group">
+          <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" />
           Back to Home
         </Link>
 
-        {/* Logo */}
-        <Link to="/" className="flex justify-center items-center space-x-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-            <MessageSquare className="text-white" size={28} />
-          </div>
-          <span className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-            SupportHub
-          </span>
-        </Link>
+        {/* SupportHub Logo */}
+        <div className="flex justify-center mb-8">
+          <Link to="/" className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+              <MessageSquare className="text-white" size={24} />
+            </div>
+            <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              Support<span className="text-emerald-600">Hub</span>
+            </span>
+          </Link>
+        </div>
 
         {/* Signup Card */}
         <div className="bg-white py-8 px-6 shadow-2xl rounded-2xl sm:px-10 border border-gray-100">
@@ -129,15 +145,15 @@ const SignupPage = () => {
               Create your account
             </h2>
             <p className="text-sm text-gray-600">
-              Get started with SupportHub today
+              Join SupportHub and start managing your support tickets
             </p>
           </div>
 
-          {/* Error Message */}
-          {error && (
+          {/* Error Messages */}
+          {(error || validationError) && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center text-red-700">
               <AlertCircle size={18} className="mr-2 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
+              <span className="text-sm">{error || validationError}</span>
             </div>
           )}
 
@@ -258,7 +274,7 @@ const SignupPage = () => {
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Use at least 8 characters with uppercase, numbers & symbols
+                    Use 8+ chars with uppercase, numbers & symbols
                   </p>
                 </div>
               )}
@@ -347,14 +363,14 @@ const SignupPage = () => {
                   Creating account...
                 </>
               ) : (
-                <>
-                  Create Account
-                </>
+                'Create Account'
               )}
             </button>
+          </form>
 
-            {/* Social Signup */}
-            <div className="relative my-6">
+          {/* Social Signup */}
+          <div className="mt-8">
+            <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
               </div>
@@ -363,27 +379,18 @@ const SignupPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                type="button"
-                className="w-full flex justify-center py-2.5 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-              >
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              <button className="w-full flex justify-center py-2.5 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
                 <Github size={20} className="text-gray-700" />
               </button>
-              <button
-                type="button"
-                className="w-full flex justify-center py-2.5 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-              >
+              <button className="w-full flex justify-center py-2.5 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
                 <Twitter size={20} className="text-blue-400" />
               </button>
-              <button
-                type="button"
-                className="w-full flex justify-center py-2.5 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-              >
+              <button className="w-full flex justify-center py-2.5 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
                 <Facebook size={20} className="text-blue-600" />
               </button>
             </div>
-          </form>
+          </div>
 
           {/* Login Link */}
           <div className="mt-8 text-center">

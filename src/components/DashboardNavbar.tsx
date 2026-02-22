@@ -1,6 +1,8 @@
 // components/DashboardNavbar.tsx
 import { useState, useRef, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { logout } from '../features/Auth/authSlice';
 import { 
   Menu, 
   X, 
@@ -21,11 +23,24 @@ const DashboardNavbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  
 
-  const user = {
-    name: 'John Doe',
-    email: 'john@example.com',
-    avatar: 'JD'
+  const handleLogOut = async () => {
+    try {
+      await dispatch(logout()).unwrap();
+    } catch (err) {
+      // ignore or show toast
+    }
+    // redirect to login regardless
+    navigate('/login');
+  };
+
+  const user = useAppSelector((state) => state.auth.user) ?? {
+    name: 'Guest',
+    email: '',
+    avatar: 'G',
   };
 
   // Close dropdown when clicking outside
@@ -158,14 +173,14 @@ const DashboardNavbar = () => {
                       <span>Settings</span>
                     </Link>
                     <hr className="my-2 border-gray-100" />
-                    <button 
+                    <button
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        // Add logout logic here
+                        handleLogOut();
                       }}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center transition-colors"
                     >
-                      <LogOut size={16} className="mr-3" /> 
+                      <LogOut size={16} className="mr-3" />
                       <span>Logout</span>
                     </button>
                   </div>
@@ -252,6 +267,7 @@ const DashboardNavbar = () => {
                 <button
                   onClick={() => {
                     setIsSidebarOpen(false);
+                    handleLogOut();
                     // Add logout logic here
                   }}
                   className="w-full flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"

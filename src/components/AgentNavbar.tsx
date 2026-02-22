@@ -1,6 +1,8 @@
 // components/AgentNavbar.tsx
 import { useState, useRef, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { logout } from '../features/Auth/authSlice';
 import { 
   Menu, 
   X, 
@@ -23,11 +25,23 @@ const AgentNavbar = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
-  const agent = {
-    name: 'Sarah Johnson',
-    email: 'sarah.johnson@supporthub.com',
-    avatar: 'SJ',
-    role: 'Senior Support Agent'
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  const handleLogOut = async () => {
+    try {
+      await dispatch(logout()).unwrap();
+    } catch (err) {
+      // ignore or show toast
+    }
+    navigate('/login');
+  };
+
+  const agent = useAppSelector((state) => state.auth.user) ?? {
+    name: 'Agent',
+    email: '',
+    avatar: 'AG',
+    role: 'Agent'
   };
 
   // Close dropdown when clicking outside
@@ -163,14 +177,14 @@ const AgentNavbar = () => {
                       <span>Settings</span>
                     </Link>
                     <hr className="my-2 border-gray-100" />
-                    <button 
+                    <button
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        // Add logout logic here
+                        handleLogOut();
                       }}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center transition-colors"
                     >
-                      <LogOut size={16} className="mr-3" /> 
+                      <LogOut size={16} className="mr-3" />
                       <span>Sign Out</span>
                     </button>
                   </div>
@@ -244,7 +258,13 @@ const AgentNavbar = () => {
               </div>
 
               <div className="p-6 border-t border-gray-200 mt-auto">
-                <button className="w-full flex items-center justify-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
+                <button
+                  onClick={() => {
+                    setIsSidebarOpen(false);
+                    handleLogOut();
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                >
                   <LogOut size={18} className="mr-2" />
                   Sign Out
                 </button>
