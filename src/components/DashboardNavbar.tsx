@@ -32,6 +32,7 @@ const DashboardNavbar = () => {
       await dispatch(logout()).unwrap();
     } catch (err) {
       // ignore or show toast
+      console.error('Logout failed:', err);
     }
     // redirect to login regardless
     navigate('/login');
@@ -88,7 +89,7 @@ const DashboardNavbar = () => {
       />
     </div>
     <div className="hidden sm:flex sm:flex-col">
-      <span className="text-xl font-bold text-gray-900">SupportHub</span>
+      <span className="text-xl font-bold text-gray-900">Support<span className="text-emerald-600">Hub</span></span>
       <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full inline-block w-fit mt-0.5">
         Customer
       </span>

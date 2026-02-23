@@ -92,7 +92,7 @@ const AgentNavbar = () => {
       />
     </div>
     <div className="hidden sm:flex sm:flex-col">
-      <span className="text-lg sm:text-xl font-bold text-gray-900">SupportHub</span>
+      <span className="text-lg sm:text-xl font-bold text-gray-900">Support<span className="text-purple-700">Hub</span></span>
       <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full inline-block w-fit mt-0.5">
         Agent
       </span>
