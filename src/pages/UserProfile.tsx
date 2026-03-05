@@ -22,12 +22,15 @@ import {
   Settings,
 } from 'lucide-react';
 import DashboardNavbar from '../components/DashboardNavbar';
+import { useAppSelector } from '../store/hooks';
 
 const UserProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+
+  const { user } = useAppSelector((state) => state.auth);
 
   // Profile data
   const [profile, setProfile] = useState({
@@ -170,9 +173,9 @@ const UserProfilePage = () => {
                     </button>
                   )}
                 </div>
-                <h2 className="text-xl font-bold text-white">{profile.name}</h2>
-                <p className="text-emerald-100 text-sm mt-1">{profile.position}</p>
-                <p className="text-emerald-100 text-xs mt-1">{profile.company}</p>
+                <h2 className="text-xl font-bold text-white">{user?.name}</h2>
+                <p className="text-emerald-100 text-sm mt-1">{user?.position}</p>
+                <p className="text-emerald-100 text-xs mt-1">{user?.company}</p>
               </div>
 
               {/* Quick Stats */}
@@ -279,12 +282,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={profile.name}
+                            value={user?.name}
                             onChange={(e) => setProfile({...profile, name: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{profile.name}</p>
+                          <p className="text-gray-900 py-2.5">{user?.name}</p>
                         )}
                       </div>
                       
@@ -295,12 +298,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="email"
-                            value={profile.email}
+                            value={user?.email}
                             onChange={(e) => setProfile({...profile, email: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{profile.email}</p>
+                          <p className="text-gray-900 py-2.5">{user?.email}</p>
                         )}
                       </div>
                       
@@ -311,12 +314,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="tel"
-                            value={profile.phone}
+                            value={user?.phone}
                             onChange={(e) => setProfile({...profile, phone: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{profile.phone}</p>
+                          <p className="text-gray-900 py-2.5">{user?.phone}</p>
                         )}
                       </div>
                       
@@ -327,12 +330,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={profile.location}
+                            value={user?.location}
                             onChange={(e) => setProfile({...profile, location: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{profile.location}</p>
+                          <p className="text-gray-900 py-2.5">{user?.location}</p>
                         )}
                       </div>
                       
@@ -343,12 +346,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={profile.company}
+                            value={user?.company}
                             onChange={(e) => setProfile({...profile, company: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{profile.company}</p>
+                          <p className="text-gray-900 py-2.5">{user?.company}</p>
                         )}
                       </div>
                       
@@ -359,12 +362,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={profile.position}
+                            value={user?.position}
                             onChange={(e) => setProfile({...profile, position: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{profile.position}</p>
+                          <p className="text-gray-900 py-2.5">{user?.position}</p>
                         )}
                       </div>
                     </div>
@@ -375,13 +378,13 @@ const UserProfilePage = () => {
                       </label>
                       {isEditing ? (
                         <textarea
-                          value={profile.bio}
+                          value={user?.bio}
                           onChange={(e) => setProfile({...profile, bio: e.target.value})}
                           rows={4}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
                         />
                       ) : (
-                        <p className="text-gray-600 p-3 bg-gray-50 rounded-lg">{profile.bio}</p>
+                        <p className="text-gray-600 p-3 bg-gray-50 rounded-lg">{user?.bio}</p>
                       )}
                     </div>
 

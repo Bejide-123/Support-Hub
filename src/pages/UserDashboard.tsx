@@ -10,11 +10,15 @@ import {
   MessageSquare,
   FileText
 } from 'lucide-react';
+import { useAppSelector } from '../store/hooks';
 import DashboardNavbar from '../components/DashboardNavbar';
 import NewTicketModal from '../components/NewTicketModal';
 
 const UserDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Get user from Redux state
+  const { user } = useAppSelector((state) => state.auth);
 
   // Mock tickets data
   const tickets = [
@@ -69,15 +73,22 @@ const UserDashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, John! 👋
+            Welcome back, {user?.name || 'User'}! 👋
           </h1>
-          <p className="text-gray-600">
-            Here's an overview of your support tickets and recent activity.
-          </p>
+          {user?.position && (
+            <p className="text-gray-600">
+              {user.position}
+            </p>
+          )}
+          {!user?.position && (
+            <p className="text-gray-600">
+              Here's an overview of your support tickets and recent activity.
+            </p>
+          )}
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
           {stats.map((stat, index) => (
             <div key={index} className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">

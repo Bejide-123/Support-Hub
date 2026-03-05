@@ -9,6 +9,7 @@ export interface AuthState {
   isLoading: boolean;
   error: string | null;
   initialized: boolean; // Track if we've checked for existing session
+  isAuthenticated: boolean; // Track if user is authenticated
 }
 
 const initialState: AuthState = {
@@ -16,6 +17,7 @@ const initialState: AuthState = {
   isLoading: false,
   error: null,
   initialized: false,
+  isAuthenticated: false,
 };
 
 // Helper to safely extract an error message from unknown errors
@@ -139,6 +141,7 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.initialized = true;
+      state.isAuthenticated = !!action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -151,11 +154,13 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.user = action.payload;
       state.initialized = true;
+      state.isAuthenticated = !!action.payload;
     });
     builder.addCase(login.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
       state.initialized = true;
+      state.isAuthenticated = false;
     });
 
     // Signup
@@ -167,11 +172,13 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.user = action.payload;
       state.initialized = true;
+      state.isAuthenticated = !!action.payload;
     });
     builder.addCase(signup.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
       state.initialized = true;
+      state.isAuthenticated = false;
     });
 
     // Logout
@@ -182,10 +189,12 @@ const authSlice = createSlice({
       state.user = null;
       state.isLoading = false;
       state.initialized = true;
+      state.isAuthenticated = false;
     });
     builder.addCase(logout.rejected, (state) => {
       state.isLoading = false;
       state.initialized = true;
+      state.isAuthenticated = false;
     });
 
     // Get Current User
@@ -196,11 +205,13 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.user = action.payload;
       state.initialized = true;
+      state.isAuthenticated = !!action.payload;
     });
     builder.addCase(getCurrentUser.rejected, (state) => {
       state.isLoading = false;
       state.user = null;
       state.initialized = true;
+      state.isAuthenticated = false;
     });
 
     // Update Profile
@@ -225,10 +236,12 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.user = action.payload;
       state.initialized = true;
+      state.isAuthenticated = !!action.payload;
     });
     builder.addCase(demoLogin.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
+      state.isAuthenticated = false;
     });
 
     // Password Reset

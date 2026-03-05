@@ -27,12 +27,15 @@ import {
   Crown
 } from 'lucide-react';
 import AgentNavbar from '../components/AgentNavbar';
+import { useAppSelector } from '../store/hooks';
 
 const AgentProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+
+  const { user } = useAppSelector((state) => state.auth);
 
   // Profile data
   const [profile, setProfile] = useState({
@@ -186,8 +189,8 @@ const AgentProfilePage = () => {
                     </button>
                   )}
                 </div>
-                <h2 className="text-xl font-bold text-white">{profile.name}</h2>
-                <p className="text-purple-100 text-sm mt-1">{profile.role}</p>
+                <h2 className="text-xl font-bold text-white">{user?.name}</h2>
+                <p className="text-purple-100 text-sm mt-1">{user?.position}</p>
                 <div className="mt-3 inline-flex items-center bg-white/20 px-3 py-1 rounded-full">
                   <Award size={14} className="mr-1 text-white" />
                   <span className="text-xs text-white">Top Performer 2024</span>
@@ -226,19 +229,19 @@ const AgentProfilePage = () => {
                 <div className="space-y-3">
                   <div className="flex items-center text-sm">
                     <Mail size={16} className="text-gray-400 mr-3" />
-                    <span className="text-gray-600">{profile.email}</span>
+                    <span className="text-gray-600">{user?.email}</span>
                   </div>
                   <div className="flex items-center text-sm">
                     <Phone size={16} className="text-gray-400 mr-3" />
-                    <span className="text-gray-600">{profile.phone}</span>
+                    <span className="text-gray-600">{user?.phone}</span>
                   </div>
                   <div className="flex items-center text-sm">
                     <MapPin size={16} className="text-gray-400 mr-3" />
-                    <span className="text-gray-600">{profile.location}</span>
+                    <span className="text-gray-600">{user?.location}</span>
                   </div>
                   <div className="flex items-center text-sm">
                     <Clock size={16} className="text-gray-400 mr-3" />
-                    <span className="text-gray-600">{profile.timezone}</span>
+                    <span className="text-gray-600">{user?.timezone}</span>
                   </div>
                 </div>
               </div>
@@ -384,7 +387,7 @@ const AgentProfilePage = () => {
                       <h3 className="text-sm font-medium text-gray-900 mb-3">Bio</h3>
                       {isEditing ? (
                         <textarea
-                          value={profile.bio}
+                          value={user?.bio}
                           onChange={(e) => setProfile({...profile, bio: e.target.value})}
                           rows={4}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"

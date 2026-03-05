@@ -23,6 +23,7 @@ export interface User {
   location?: string;
   avatar?: string;
   bio?: string;
+  timezone?: string;
 }
 
 export interface UserProfile {

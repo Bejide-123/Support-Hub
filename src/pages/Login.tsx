@@ -1,5 +1,5 @@
 // src/pages/LoginPage.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { login, demoLogin, clearError } from '../features/Auth/authSlice';
@@ -21,6 +21,9 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { isLoading, error, user } = useAppSelector((state) => state.auth);
+  
+  // Use a ref to track if we've already attempted redirect
+  const redirectAttempted = useRef(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -29,19 +32,33 @@ const LoginPage = () => {
     password: ''
   });
 
-  // Redirect if already logged in
+  // Redirect if already logged in - but only once and when conditions are right
   useEffect(() => {
-    if (user) {
-      // Normalize role check (handle 'Agent', 'agent', 'user', 'customer', etc.)
-      const role = (user.role ?? '').toString().toLowerCase();
-      console.debug('Login redirect - user role:', role, user);
-      if (role.includes('agent')) {
-        navigate('/agent/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+    // Only attempt redirect if:
+    // 1. We have a user
+    // 2. We're not loading
+    // 3. We haven't already attempted a redirect
+    // 4. The user object has a role property
+    if (user && !isLoading && !redirectAttempted.current && user.role) {
+      redirectAttempted.current = true;
+      
+      const role = user.role.toString().toLowerCase();
+      
+      // Use setTimeout to prevent potential race conditions
+      setTimeout(() => {
+        if (role.includes('agent')) {
+          navigate('/agent/dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }, 0);
     }
-  }, [user, navigate]);
+    
+    // Reset the redirect flag if user becomes null (logged out)
+    if (!user) {
+      redirectAttempted.current = false;
+    }
+  }, [user, isLoading, navigate]);
 
   // Clear error when component unmounts
   useEffect(() => {
@@ -52,11 +69,46 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(login(formData));
+    try {
+      const resultAction = await dispatch(login(formData)).unwrap();
+      
+      // Reset the redirect flag before navigating
+      redirectAttempted.current = false;
+      
+      // The user object is in resultAction
+      if (resultAction && resultAction.role) {
+        const role = resultAction.role.toString().toLowerCase();
+        if (role.includes('agent')) {
+          navigate('/agent/dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    } catch (err) {
+      // Error handled by authSlice, no need to re-throw or set here
+      console.error('Login failed:', err);
+    }
   };
 
-  const handleDemoLogin = (role: 'user' | 'agent') => {
-    dispatch(demoLogin(role));
+  const handleDemoLogin = async (role: 'user' | 'agent') => {
+    try {
+      const resultAction = await dispatch(demoLogin(role)).unwrap();
+      
+      // Reset the redirect flag before navigating
+      redirectAttempted.current = false;
+      
+      // The user object is in resultAction
+      if (resultAction && resultAction.role) {
+        const userRole = resultAction.role.toString().toLowerCase();
+        if (userRole.includes('agent')) {
+          navigate('/agent/dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    } catch (err) {
+      console.error('Demo login failed:', err);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -18,6 +18,10 @@ export type Profile = {
   avatar?: string;
   company?: string;
   phone?: string;
+  position?: string;
+  location?: string;
+  bio?: string;
+  timezone?: string;
   created_at: string;
   updated_at: string;
 };

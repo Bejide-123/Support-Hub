@@ -16,9 +16,17 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import AgentNavbar from '../components/AgentNavbar';
+import { useAppSelector } from '../store/hooks';
 
 const AgentDashboard = () => {
   const [timeRange, setTimeRange] = useState('today');
+
+  const agent = useAppSelector((state) => state.auth.user) ?? {
+      name: 'Agent',
+      email: '',
+      avatar: 'AG',
+      role: 'Agent'
+    };
 
   // Performance metrics
   const metrics = [
@@ -145,7 +153,7 @@ const AgentDashboard = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-              Good morning, Sarah! 👋
+              Good morning, {agent.name} 👋
             </h1>
             <p className="text-gray-600">
               Here's what's happening with your support queue today.
@@ -300,7 +308,7 @@ const AgentDashboard = () => {
                     SJ
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Sarah Johnson</p>
+                    <p className="font-medium text-gray-900">{agent.name}</p>
                     <p className="text-xs text-gray-500">Senior Support Agent</p>
                   </div>
                 </div>
