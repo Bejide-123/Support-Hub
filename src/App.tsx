@@ -23,11 +23,22 @@ import ForgotPasswordPage from "./pages/Forgot";
 import CustomerListPage from "./pages/CustomerList";
 import { Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { useSelector } from "react-redux";
 import type { RootState } from "./store";
+import { useAppSelector, useAppDispatch } from "./store/hooks";
+import { useEffect } from "react";
+import { getCurrentUser } from "./features/Auth/authSlice";
 
 const App = () => {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, initialized } = useAppSelector((state: RootState) => state.auth);
+  useEffect(() => {
+    dispatch(getCurrentUser());
+  }, [dispatch]);
+  
+
+  if (!initialized) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
 
   return (
     <Routes>

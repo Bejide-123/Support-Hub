@@ -1,5 +1,4 @@
-// pages/UserDashboard.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Ticket,
   Plus,
@@ -10,30 +9,55 @@ import {
   MessageSquare,
   FileText
 } from 'lucide-react';
-import { useAppSelector } from '../store/hooks';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
 import DashboardNavbar from '../components/DashboardNavbar';
 import NewTicketModal from '../components/NewTicketModal';
+import { fetchTickets, selectAllTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
+import { selectCurrentUser } from '../features/Auth/authSlice';
+
+// Status badge component (move this outside the main component)
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles = {
+    'open': 'bg-blue-100 text-blue-700',
+    'in-progress': 'bg-yellow-100 text-yellow-700',
+    'resolved': 'bg-green-100 text-green-700',
+    'closed': 'bg-gray-100 text-gray-700',
+    'urgent': 'bg-red-100 text-red-700',
+    'high': 'bg-orange-100 text-orange-700',
+    'medium': 'bg-yellow-100 text-yellow-700',
+    'low': 'bg-green-100 text-green-700',
+  };
+  
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-700'}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+};
 
 const UserDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Get user from Redux state
-  const { user } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
 
-  // Mock tickets data
-  const tickets = [
-    { id: 'TKT-001', subject: 'Unable to login to account', status: 'open', priority: 'high', created: '2024-03-15', updated: '2 hours ago' },
-    { id: 'TKT-002', subject: 'Payment not processed', status: 'in-progress', priority: 'urgent', created: '2024-03-14', updated: '1 hour ago' },
-    { id: 'TKT-003', subject: 'Feature request: Dark mode', status: 'resolved', priority: 'low', created: '2024-03-10', updated: '2 days ago' },
-    { id: 'TKT-004', subject: 'Billing invoice error', status: 'closed', priority: 'medium', created: '2024-03-08', updated: '3 days ago' },
-  ];
+  // Get user from Redux state
+  const user = useAppSelector(selectCurrentUser);
+  const tickets = useAppSelector(selectAllTickets);
+  const isLoading = useAppSelector(selectTicketsLoading);
+  const ticketStats = useAppSelector(selectTicketStats);
+
+  useEffect(() => {
+    if (user?.id) {
+      dispatch(fetchTickets({ status: '', priority: '' }));
+      dispatch(getUserTicketStats(user.id));
+    }
+  }, [dispatch, user?.id]);
 
   // Stats data
   const stats = [
-    { label: 'Open Tickets', value: '3', icon: <Ticket size={20} />, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { label: 'In Progress', value: '1', icon: <Clock size={20} />, color: 'text-yellow-600', bg: 'bg-yellow-100' },
-    { label: 'Resolved', value: '1', icon: <CheckCircle size={20} />, color: 'text-green-600', bg: 'bg-green-100' },
-    { label: 'Total Tickets', value: '5', icon: <FileText size={20} />, color: 'text-purple-600', bg: 'bg-purple-100' },
+    { label: 'Open Tickets', value: ticketStats?.open || 0, icon: <Ticket size={20} />, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { label: 'In Progress', value: ticketStats?.inProgress || 0, icon: <Clock size={20} />, color: 'text-yellow-600', bg: 'bg-yellow-100' },
+    { label: 'Resolved', value: ticketStats?.resolved || 0, icon: <CheckCircle size={20} />, color: 'text-green-600', bg: 'bg-green-100' },
+    { label: 'Total Tickets', value: ticketStats?.total || 0, icon: <FileText size={20} />, color: 'text-purple-600', bg: 'bg-purple-100' },
   ];
 
   // FAQ items
@@ -43,26 +67,6 @@ const UserDashboard = () => {
     { question: 'How to update profile?', views: '756 views' },
     { question: 'Ticket response times?', views: '645 views' },
   ];
-
-  // Status badge component
-  const StatusBadge = ({ status }: { status: string }) => {
-    const styles = {
-      'open': 'bg-blue-100 text-blue-700',
-      'in-progress': 'bg-yellow-100 text-yellow-700',
-      'resolved': 'bg-green-100 text-green-700',
-      'closed': 'bg-gray-100 text-gray-700',
-      'urgent': 'bg-red-100 text-red-700',
-      'high': 'bg-orange-100 text-orange-700',
-      'medium': 'bg-yellow-100 text-yellow-700',
-      'low': 'bg-green-100 text-green-700',
-    };
-    
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-700'}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -138,22 +142,32 @@ const UserDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {tickets.map((ticket) => (
-                      <tr key={ticket.id} className="hover:bg-gray-50 transition-colors cursor-pointer">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{ticket.id}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700">{ticket.subject}</td>
-                        <td className="px-6 py-4">
-                          <StatusBadge status={ticket.status} />
-                        </td>
-                        <td className="px-6 py-4">
-                          <StatusBadge status={ticket.priority} />
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{ticket.updated}</td>
-                        <td className="px-6 py-4">
-                          <ChevronRight size={18} className="text-gray-400" />
-                        </td>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">Loading tickets...</td>
                       </tr>
-                    ))}
+                    ) : tickets.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">No tickets found.</td>
+                      </tr>
+                    ) : (
+                      tickets.map((ticket) => (
+                        <tr key={ticket.id} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{ticket.ticket_number}</td>
+                          <td className="px-6 py-4 text-sm text-gray-700">{ticket.subject}</td>
+                          <td className="px-6 py-4">
+                            <StatusBadge status={ticket.status} />
+                          </td>
+                          <td className="px-6 py-4">
+                            <StatusBadge status={ticket.priority} />
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{new Date(ticket.updated_at).toLocaleString()}</td>
+                          <td className="px-6 py-4">
+                            <ChevronRight size={18} className="text-gray-400" />
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

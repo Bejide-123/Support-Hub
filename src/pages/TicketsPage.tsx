@@ -1,5 +1,5 @@
 // pages/TicketsPage.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Ticket, 
   Search, 
@@ -9,10 +9,13 @@ import {
   ArrowUpDown,
   Calendar,
   Download,
-  PlusCircle
+  PlusCircle,
 } from 'lucide-react';
 import DashboardNavbar from '../components/DashboardNavbar';
 import NewTicketModal from '../components/NewTicketModal';
+import { fetchTickets, selectAllTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
+import { selectCurrentUser } from '../features/Auth/authSlice';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
 
 const TicketsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,89 +24,28 @@ const TicketsPage = () => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
-  // Mock tickets data
-  const tickets = [
-    { 
-      id: 'TKT-001', 
-      subject: 'Unable to login to account', 
-      status: 'open', 
-      priority: 'high', 
-      created: '2024-03-15', 
-      updated: '2 hours ago',
-      category: 'Technical Issue',
-      messages: 8
-    },
-    { 
-      id: 'TKT-002', 
-      subject: 'Payment not processed', 
-      status: 'in-progress', 
-      priority: 'urgent', 
-      created: '2024-03-14', 
-      updated: '1 hour ago',
-      category: 'Billing',
-      messages: 12
-    },
-    { 
-      id: 'TKT-003', 
-      subject: 'Feature request: Dark mode', 
-      status: 'resolved', 
-      priority: 'low', 
-      created: '2024-03-10', 
-      updated: '2 days ago',
-      category: 'Feature Request',
-      messages: 5
-    },
-    { 
-      id: 'TKT-004', 
-      subject: 'Billing invoice error', 
-      status: 'closed', 
-      priority: 'medium', 
-      created: '2024-03-08', 
-      updated: '3 days ago',
-      category: 'Billing',
-      messages: 3
-    },
-    { 
-      id: 'TKT-005', 
-      subject: 'Mobile app crash on startup', 
-      status: 'open', 
-      priority: 'high', 
-      created: '2024-03-15', 
-      updated: '30 mins ago',
-      category: 'Technical Issue',
-      messages: 4
-    },
-    { 
-      id: 'TKT-006', 
-      subject: 'Email notifications not working', 
-      status: 'in-progress', 
-      priority: 'medium', 
-      created: '2024-03-13', 
-      updated: '5 hours ago',
-      category: 'Technical Issue',
-      messages: 6
-    },
-    { 
-      id: 'TKT-007', 
-      subject: 'Subscription upgrade failed', 
-      status: 'open', 
-      priority: 'urgent', 
-      created: '2024-03-15', 
-      updated: '15 mins ago',
-      category: 'Billing',
-      messages: 2
-    },
-    { 
-      id: 'TKT-008', 
-      subject: 'Cannot add team members', 
-      status: 'resolved', 
-      priority: 'low', 
-      created: '2024-03-09', 
-      updated: '4 days ago',
-      category: 'Account Management',
-      messages: 7
-    },
-  ];
+  const dispatch = useAppDispatch();
+
+  const user = useAppSelector(selectCurrentUser);
+  const tickets = useAppSelector(selectAllTickets);
+  const isLoading = useAppSelector(selectTicketsLoading);
+  const ticketStats = useAppSelector(selectTicketStats);
+
+  useEffect(() => {
+    if (user?.id) {
+      dispatch(fetchTickets({ status: '', priority: '' }));
+      dispatch(getUserTicketStats(user.id));
+    }
+  }, [dispatch, user?.id]);
+
+  // Stats for cards - using actual data from Redux
+  const stats = {
+    total: ticketStats?.total || 0,
+    open: ticketStats?.open || 0,
+    inProgress: ticketStats?.inProgress || 0,
+    resolved: ticketStats?.resolved || 0,
+    urgent: tickets.filter(t => t.priority === 'urgent').length,
+  };
 
   // Status badge component
   const StatusBadge = ({ status }: { status: string }) => {
@@ -140,8 +82,8 @@ const TicketsPage = () => {
   // Filter tickets
   const filteredTickets = tickets.filter(ticket => {
     // Search filter
-    const matchesSearch = ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         ticket.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = ticket.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         ticket.id?.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Status filter
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
@@ -156,26 +98,30 @@ const TicketsPage = () => {
   const sortedTickets = [...filteredTickets].sort((a, b) => {
     switch(sortBy) {
       case 'newest':
-        return new Date(b.created).getTime() - new Date(a.created).getTime();
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       case 'oldest':
-        return new Date(a.created).getTime() - new Date(b.created).getTime();
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       case 'updated':
-        return b.updated.localeCompare(a.updated);
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       case 'priority':
         const priorityOrder = { 'urgent': 1, 'high': 2, 'medium': 3, 'low': 4 };
-        return priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder];
+        return (priorityOrder[a.priority as keyof typeof priorityOrder] || 5) - 
+               (priorityOrder[b.priority as keyof typeof priorityOrder] || 5);
       default:
         return 0;
     }
   });
 
-  // Stats
-  const stats = {
-    total: tickets.length,
-    open: tickets.filter(t => t.status === 'open').length,
-    inProgress: tickets.filter(t => t.status === 'in-progress').length,
-    resolved: tickets.filter(t => t.status === 'resolved').length,
-    urgent: tickets.filter(t => t.priority === 'urgent').length,
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
   };
 
   return (
@@ -314,35 +260,36 @@ const TicketsPage = () => {
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket ID</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Messages</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {sortedTickets.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="flex justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : sortedTickets.length > 0 ? (
                   sortedTickets.map((ticket) => (
                     <tr 
                       key={ticket.id} 
                       className="hover:bg-gray-50 transition-colors cursor-pointer group"
-                      onClick={() => window.location.href = `/tickets/${ticket.id}`}
+                      onClick={() => window.location.href = `/tickets/${ticket.id}`} // Navigate to ticket details page
                     >
                       <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-gray-900">{ticket.id}</span>
+                        <span className="text-sm font-medium text-gray-900">{ticket.ticket_number}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 group-hover:text-emerald-600 transition-colors">
-                            {ticket.subject}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600">{ticket.category}</span>
+                        <p className="text-sm font-medium text-gray-900 group-hover:text-emerald-600 transition-colors">
+                          {ticket.subject}
+                        </p>
                       </td>
                       <td className="px-6 py-4">
                         <StatusBadge status={ticket.status} />
@@ -353,19 +300,14 @@ const TicketsPage = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center text-sm text-gray-500">
                           <Calendar size={14} className="mr-1" />
-                          {ticket.created}
+                          {formatDate(ticket.created_at)}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center text-sm text-gray-500">
                           <Clock size={14} className="mr-1" />
-                          {ticket.updated}
+                          {formatDate(ticket.updated_at)}
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                          {ticket.messages}
-                        </span>
                       </td>
                       <td className="px-6 py-4">
                         <ChevronRight size={18} className="text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
@@ -374,7 +316,7 @@ const TicketsPage = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center">
+                    <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center">
                         <Ticket size={48} className="text-gray-300 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
@@ -396,32 +338,6 @@ const TicketsPage = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
-          {sortedTickets.length > 0 && (
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">{sortedTickets.length}</span> of <span className="font-medium">{sortedTickets.length}</span> tickets
-              </p>
-              <div className="flex items-center space-x-2">
-                <button className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                  Previous
-                </button>
-                <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
-                  1
-                </button>
-                <button className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50">
-                  2
-                </button>
-                <button className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50">
-                  3
-                </button>
-                <button className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50">
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </main>
 

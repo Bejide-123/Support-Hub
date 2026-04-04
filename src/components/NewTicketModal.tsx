@@ -58,12 +58,14 @@ const NewTicketModal = ({ isOpen, onClose }: NewTicketModalProps) => {
     }
 
     try {
+      const randomDigits = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
       const result = await dispatch(createTicket({
         ticketData: {
           subject: formData.subject,
           description: formData.description,
           category: formData.category,
           priority: formData.priority,
+          ticket_number: `TKT-${randomDigits}`
         },
         userId: user.id
       })).unwrap();

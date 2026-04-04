@@ -7,6 +7,7 @@ export interface Ticket {
   status: 'open' | 'in-progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   category: string;
+  ticket_number: string;
   customer_id: string;
   assigned_to?: string | null;
   created_at: string;
@@ -24,6 +25,7 @@ export interface CreateTicketData {
   description: string;
   category?: string;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
+  ticket_number : string;
 }
 
 export interface UpdateTicketData {
@@ -106,6 +108,7 @@ export const ticketsAPI = {
         description: ticketData.description,
         category: ticketData.category || 'general',
         priority: ticketData.priority || 'medium',
+        ticket_number: ticketData.ticket_number,
         status: 'open',
         customer_id: userId,
         created_at: new Date().toISOString(),

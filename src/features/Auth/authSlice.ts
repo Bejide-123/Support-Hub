@@ -3,6 +3,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { authAPI } from './authApi';
 import type { User, LoginCredentials, SignupData } from './authApi';
+import type { RootState } from '../../store/index';
 
 export interface AuthState {
   user: User | null;
@@ -260,4 +261,8 @@ const authSlice = createSlice({
 });
 
 export const { clearError, setUser } = authSlice.actions;
+
+// Selector to get the current user
+export const selectCurrentUser = (state: RootState) => state.auth.user;
+
 export default authSlice.reducer;
