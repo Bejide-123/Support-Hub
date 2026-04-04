@@ -1,6 +1,6 @@
 // pages/AgentTicketQueue.tsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Add this import
+import { useState, useEffect } from 'react';
+// import { useNavigate } from 'react-router-dom'; // Add this import
 import {
   Search,
   ChevronRight,
@@ -14,144 +14,55 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import AgentNavbar from '../components/AgentNavbar';
+import { fetchTickets, selectAllTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { selectCurrentUser } from '../features/Auth/authSlice';
+import { authAPI } from '../features/Auth/authApi';
+import type { User } from '../features/Auth/authApi';
 
 const AgentTicketQueue = () => {
-  const navigate = useNavigate(); // Add this hook
+  // const navigate = useNavigate(); // Add this hook
+  const dispatch = useAppDispatch();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
-  // const [showBulkActions, setShowBulkActions] = useState(false);
+  const [customerMap, setCustomerMap] = useState<Record<string, User>>({});
 
-  // Mock tickets data
-  const tickets = [
-    { 
-      id: 'TKT-1245', 
-      subject: 'Unable to process payment - card declined multiple times', 
-      customer: 'John Smith',
-      customerEmail: 'john.smith@email.com',
-      status: 'urgent', 
-      priority: 'urgent', 
-      category: 'Billing',
-      assignedTo: 'Sarah Johnson',
-      created: '2024-03-15',
-      updated: '2 min ago',
-      messages: 8,
-      tags: ['payment', 'urgent']
-    },
-    { 
-      id: 'TKT-1244', 
-      subject: 'Feature request: Bulk export functionality', 
-      customer: 'Emily Davis',
-      customerEmail: 'emily.davis@email.com',
-      status: 'open', 
-      priority: 'low', 
-      category: 'Feature Request',
-      assignedTo: 'Unassigned',
-      created: '2024-03-15',
-      updated: '15 min ago',
-      messages: 3,
-      tags: ['feature']
-    },
-    { 
-      id: 'TKT-1243', 
-      subject: 'Account login issues - 2FA not sending codes', 
-      customer: 'Alex Wong',
-      customerEmail: 'alex.wong@email.com',
-      status: 'in-progress', 
-      priority: 'high', 
-      category: 'Technical Issue',
-      assignedTo: 'Mike Chen',
-      created: '2024-03-14',
-      updated: '34 min ago',
-      messages: 12,
-      tags: ['security', '2fa']
-    },
-    { 
-      id: 'TKT-1242', 
-      subject: 'Subscription downgrade not reflecting', 
-      customer: 'Sarah Miller',
-      customerEmail: 'sarah.miller@email.com',
-      status: 'in-progress', 
-      priority: 'medium', 
-      category: 'Billing',
-      assignedTo: 'You',
-      created: '2024-03-14',
-      updated: '1 hour ago',
-      messages: 6,
-      tags: ['subscription']
-    },
-    { 
-      id: 'TKT-1241', 
-      subject: 'Mobile app crashes on startup - iOS 17', 
-      customer: 'James Wilson',
-      customerEmail: 'james.wilson@email.com',
-      status: 'urgent', 
-      priority: 'urgent', 
-      category: 'Technical Issue',
-      assignedTo: 'Emily Rodriguez',
-      created: '2024-03-14',
-      updated: '2 hours ago',
-      messages: 15,
-      tags: ['mobile', 'crash']
-    },
-    { 
-      id: 'TKT-1240', 
-      subject: 'Data export not completing', 
-      customer: 'Lisa Patel',
-      customerEmail: 'lisa.patel@email.com',
-      status: 'open', 
-      priority: 'high', 
-      category: 'Technical Issue',
-      assignedTo: 'Unassigned',
-      created: '2024-03-13',
-      updated: '3 hours ago',
-      messages: 5,
-      tags: ['export']
-    },
-    { 
-      id: 'TKT-1239', 
-      subject: 'Invoice discrepancy - overcharged', 
-      customer: 'Robert Chen',
-      customerEmail: 'robert.chen@email.com',
-      status: 'resolved', 
-      priority: 'medium', 
-      category: 'Billing',
-      assignedTo: 'David Kim',
-      created: '2024-03-13',
-      updated: '5 hours ago',
-      messages: 9,
-      tags: ['invoice']
-    },
-    { 
-      id: 'TKT-1238', 
-      subject: 'Cannot add team members', 
-      customer: 'Maria Garcia',
-      customerEmail: 'maria.garcia@email.com',
-      status: 'in-progress', 
-      priority: 'medium', 
-      category: 'Account Management',
-      assignedTo: 'You',
-      created: '2024-03-12',
-      updated: '1 day ago',
-      messages: 7,
-      tags: ['team', 'permissions']
-    },
-    { 
-      id: 'TKT-1237', 
-      subject: 'API rate limiting too strict', 
-      customer: 'David Kim',
-      customerEmail: 'david.kim@email.com',
-      status: 'closed', 
-      priority: 'low', 
-      category: 'API',
-      assignedTo: 'Sarah Johnson',
-      created: '2024-03-11',
-      updated: '2 days ago',
-      messages: 11,
-      tags: ['api', 'performance']
-    },
-  ];
+  const user = useAppSelector(selectCurrentUser);
+  const tickets = useAppSelector(selectAllTickets);
+   const isLoading = useAppSelector(selectTicketsLoading);
+  const ticketStats = useAppSelector(selectTicketStats);
+
+  useEffect(() => {
+      if (user?.id) {
+        dispatch(fetchTickets({ status: '', priority: '' }));
+        dispatch(getUserTicketStats(user.id));
+      }
+    }, [dispatch, user?.id]);
+
+  // Fetch customer data for all tickets
+  useEffect(() => {
+    const fetchCustomerData = async () => {
+      const uniqueCustomerIds = [...new Set(tickets.map(t => t.customer_id))];
+      const customers: Record<string, User> = {};
+
+      for (const customerId of uniqueCustomerIds) {
+        if (!customerMap[customerId]) {
+          const customer = await authAPI.getProfileById(customerId);
+          if (customer) {
+            customers[customerId] = customer;
+          }
+        }
+      }
+
+      setCustomerMap(prev => ({ ...prev, ...customers }));
+    };
+
+    if (tickets.length > 0) {
+      fetchCustomerData();
+    }
+  }, [tickets]);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -162,13 +73,14 @@ const AgentTicketQueue = () => {
     dateRange: 'all'
   });
 
-  // Queue stats
   const stats = {
-    total: tickets.length,
+    total: ticketStats?.total || 0,
+    open: ticketStats?.open || 0,
+    inProgress: ticketStats?.inProgress || 0,
+    resolved: ticketStats?.resolved || 0,
     urgent: tickets.filter(t => t.priority === 'urgent').length,
-    unassigned: tickets.filter(t => t.assignedTo === 'Unassigned').length,
-    overdue: 3,
-    avgResponse: '4.2m'
+    unassigned: tickets.filter(t => !t.assigned_to || t.assigned_to === 'Unassigned').length,
+    avgResponse: '4.2m' // This could be added to ticketStats if available
   };
 
   // Status badge component
@@ -223,11 +135,13 @@ const AgentTicketQueue = () => {
 
   // Filter tickets
   const filteredTickets = tickets.filter(ticket => {
+    const customerName = customerMap[ticket.customer_id]?.name || '';
+    
     // Search
     const matchesSearch = searchQuery === '' || 
       ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.customer.toLowerCase().includes(searchQuery.toLowerCase());
+      customerName.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Status filter
     const matchesStatus = filters.status.length === 0 || filters.status.includes(ticket.status);
@@ -236,18 +150,18 @@ const AgentTicketQueue = () => {
     const matchesPriority = filters.priority.length === 0 || filters.priority.includes(ticket.priority);
     
     // Category filter
-    const matchesCategory = filters.category.length === 0 || filters.category.includes(ticket.category);
+    const matchesCategory = filters.category.length === 0 || filters.category.includes(ticket.category || '');
     
-    // Assigned filter
+    // Assigned filter - fixed for real data
     const matchesAssigned = filters.assignedTo.length === 0 || 
-                           (filters.assignedTo.includes('unassigned') && ticket.assignedTo === 'Unassigned') ||
-                           (filters.assignedTo.includes('me') && ticket.assignedTo === 'You') ||
-                           filters.assignedTo.includes(ticket.assignedTo);
+                           (filters.assignedTo.includes('unassigned') && !ticket.assigned_to) ||
+                           (filters.assignedTo.includes('me') && ticket.assigned_to === user?.name) ||
+                           filters.assignedTo.includes(ticket.assigned_to || '');
     
     // View mode
     const matchesView = viewMode === 'all' || 
-                       (viewMode === 'unassigned' && ticket.assignedTo === 'Unassigned') ||
-                       (viewMode === 'assigned-to-me' && ticket.assignedTo === 'You') ||
+                       (viewMode === 'unassigned' && !ticket.assigned_to) ||
+                       (viewMode === 'assigned-to-me' && ticket.assigned_to === user?.name) ||
                        (viewMode === 'urgent' && ticket.priority === 'urgent');
     
     return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesAssigned && matchesView;
@@ -318,7 +232,7 @@ const AgentTicketQueue = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-sm text-gray-500 mb-1">Total Tickets</p>
-            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+            <p className="text-2xl font-bold text-gray-900">{tickets.length}</p>
           </div>
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-sm text-gray-500 mb-1">Urgent</p>
@@ -573,7 +487,18 @@ const AgentTicketQueue = () => {
           </div>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <div className="inline-block">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+              <p className="mt-4 text-gray-600">Loading tickets...</p>
+            </div>
+          </div>
+        )}
+
         {/* Tickets Table */}
+        {!isLoading && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -605,7 +530,7 @@ const AgentTicketQueue = () => {
                       className={`hover:bg-gray-50 transition-colors cursor-pointer group ${
                         ticket.priority === 'urgent' ? 'bg-red-50/30' : ''
                       }`}
-                      onClick={() => navigate(`/agent/tickets/${ticket.id}`)} // Fixed navigation
+                      // onClick={() => navigate(`/agent/tickets/${ticket.id}`)} // Fixed navigation
                     >
                       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                         <input
@@ -616,7 +541,7 @@ const AgentTicketQueue = () => {
                         />
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-gray-900">{ticket.id}</span>
+                        <span className="text-sm font-medium text-gray-900">{ticket.ticket_number}</span>
                       </td>
                       <td className="px-6 py-4">
                         <div>
@@ -624,7 +549,7 @@ const AgentTicketQueue = () => {
                             {ticket.subject}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
-                            {ticket.tags.map((tag, i) => (
+                            {ticket.tags && ticket.tags.map((tag, i) => (
                               <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">
                                 {tag}
                               </span>
@@ -636,12 +561,12 @@ const AgentTicketQueue = () => {
                         <div className="flex items-center">
                           <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center mr-2">
                             <span className="text-xs font-medium text-gray-700">
-                              {ticket.customer.split(' ').map(n => n[0]).join('')}
+                              {(customerMap[ticket.customer_id]?.name || 'C').split(' ').map((n: string) => n[0]).join('')}
                             </span>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-900">{ticket.customer}</p>
-                            <p className="text-xs text-gray-500">{ticket.customerEmail}</p>
+                            <p className="text-sm text-gray-900">{customerMap[ticket.customer_id]?.name || 'Unknown Customer'}</p>
+                            <p className="text-xs text-gray-500">{customerMap[ticket.customer_id]?.email || ''}</p>
                           </div>
                         </div>
                       </td>
@@ -652,7 +577,7 @@ const AgentTicketQueue = () => {
                         <PriorityBadge priority={ticket.priority} />
                       </td>
                       <td className="px-6 py-4">
-                        {ticket.assignedTo === 'Unassigned' ? (
+                        {!ticket.assigned_to || ticket.assigned_to === 'Unassigned' ? (
                           <button 
                             className="px-2 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors flex items-center"
                             onClick={(e) => e.stopPropagation()}
@@ -661,23 +586,21 @@ const AgentTicketQueue = () => {
                             Assign
                           </button>
                         ) : (
-                          <span className={`text-sm ${
-                            ticket.assignedTo === 'You' ? 'font-medium text-purple-600' : 'text-gray-700'
-                          }`}>
-                            {ticket.assignedTo}
+                          <span className="text-sm text-gray-700">
+                            {ticket.assigned_to}
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center text-sm text-gray-500">
                           <Clock size={14} className="mr-1" />
-                          {ticket.updated}
+                          {new Date(ticket.updated_at).toLocaleDateString()}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                            {ticket.messages}
+                            {/* {ticket.message_count || 0} */}
                           </span>
                           <ChevronRight size={18} className="text-gray-400 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
                         </div>
@@ -733,6 +656,7 @@ const AgentTicketQueue = () => {
             </div>
           )}
         </div>
+        )}
       </main>
     </div>
   );

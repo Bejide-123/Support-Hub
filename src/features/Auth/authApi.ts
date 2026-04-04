@@ -112,6 +112,21 @@ export const authAPI = {
     return profile as User;
   },
 
+  // Get user profile by ID
+  getProfileById: async (userId: string): Promise<User | null> => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+    return profile as User;
+  },
+
   // Update profile
   updateProfile: async (userId: string, data: Partial<User>) => {
     const { data: profile, error } = await supabase
