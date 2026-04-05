@@ -1,3 +1,4 @@
+import { Toaster } from 'react-hot-toast'; // Added Toaster import
 import HeroSection from "./components/Hero";
 import KnowledgeBaseSection from "./components/KnowledgeBase";
 import FAQSection from "./components/FAQsection";
@@ -41,58 +42,61 @@ const App = () => {
   }
 
   return (
-    <Routes>
-      {/* Public Routes - No Auth Required */}
-      <Route
-        path="/"
-        element={
-          <>
-            <HeroSection />
-            <KnowledgeBaseSection />
-            <FAQSection />
-            <ContactSection />
-            <Footer />
-          </>
-        }
-      />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/forgot" element={<ForgotPasswordPage />} />
-
-      {/* Protected Routes */}
-      <Route element={<ProtectedRoute />}>
-        {/* User Routes */}
-        <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/tickets" element={<TicketsPage />} />
-        <Route path="/ticket-details" element={<TicketDetailPage />} />
-        <Route path="/faq" element={<HelpCenterPage />} />
-        <Route path="/profile" element={<UserProfilePage />} />
-        <Route path="/settings" element={<UserSettingsPage />} />
-
-        {/* Agent Routes */}
-        <Route path="/agent/dashboard" element={<AgentDashboard />} />
-        <Route path="/agent/tickets" element={<AgentTicketQueue />} />
-        {/* <Route
-          path="/agent/tickets-details"
+    <>
+      <Toaster /> {/* Added Toaster component */}
+      <Routes>
+        {/* Public Routes - No Auth Required */}
+        <Route
+          path="/"
           element={
-              <AgentTicketDetailPage />
+            <>
+              <HeroSection />
+              <KnowledgeBaseSection />
+              <FAQSection />
+              <ContactSection />
+              <Footer />
+            </>
           }
-        /> */}
-        <Route path="/agent/customers" element={<CustomerListPage />} />
-        {/* <Route
-          path="/agent/customers/:id"
-          element={
-              <CustomerProfilePage />
-          }
-        /> */}
-        <Route path="/agent/analytics" element={<Analytics />} />
-        <Route path="/agent/profile" element={<AgentProfilePage />} />
-        <Route path="/agent/settings" element={<AgentSettings />} />
-      </Route>
+        />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot" element={<ForgotPasswordPage />} />
 
-      {/* Catch-all redirect for any unmatched routes */}
-      <Route path="*" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
-    </Routes>
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          {/* User Routes */}
+          <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/tickets" element={<TicketsPage />} />
+          <Route path="/ticket-details" element={<TicketDetailPage />} />
+          <Route path="/faq" element={<HelpCenterPage />} />
+          <Route path="/profile" element={<UserProfilePage />} />
+          <Route path="/settings" element={<UserSettingsPage />} />
+
+          {/* Agent Routes */}
+          <Route path="/agent/dashboard" element={<AgentDashboard />} />
+          <Route path="/agent/tickets" element={<AgentTicketQueue />} />
+          {/* <Route
+            path="/agent/tickets-details"
+            element={
+                <AgentTicketDetailPage />
+            }
+          /> */}
+          <Route path="/agent/customers" element={<CustomerListPage />} />
+          {/* <Route
+            path="/agent/customers/:id"
+            element={
+                <CustomerProfilePage />
+            }
+          /> */}
+          <Route path="/agent/analytics" element={<Analytics />} />
+          <Route path="/agent/profile" element={<AgentProfilePage />} />
+          <Route path="/agent/settings" element={<AgentSettings />} />
+        </Route>
+
+        {/* Catch-all redirect for any unmatched routes */}
+        <Route path="*" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+      </Routes>
+    </>
   );
 };
 
