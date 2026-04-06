@@ -1,419 +1,603 @@
 // pages/TicketDetailPage.tsx
-import { useState } from 'react';
-import {  Link } from 'react-router-dom';
-// import { useParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   MessageSquare,
   Paperclip,
   Send,
   Clock,
-  User,
-  Download,
   ChevronDown,
   Tag,
   Calendar,
   Edit,
   Trash2,
+  AlertCircle,
+  XCircle,
+  RefreshCw,
+  MoreVertical,
+  Reply,
+  Star,
+  Users,
+  File,
+  Mic,
+  Smile,
+  Image as ImageIcon,
+  CheckCircle2,
+  CircleDot,
+  Circle,
+  MinusCircle,
 } from 'lucide-react';
 import DashboardNavbar from '../components/DashboardNavbar';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import {
+  fetchTicketById,
+  fetchMessages,
+  addMessage,
+  updateTicket,
+  selectCurrentTicket,
+  selectTicketMessages,
+  selectTicketsLoading,
+  clearCurrentTicket,
+} from '../features/Tickets/ticketsSlice';
+import { selectCurrentUser } from '../features/Auth/authSlice';
+import toast from 'react-hot-toast';
 
-const TicketDetailPage = () => {
-  // const { id } = useParams();
-  const [newMessage, setNewMessage] = useState('');
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+/* ─── tiny helpers ─────────────────────────────────────────── */
 
-  // Mock ticket data
-  const ticket = {
-    id: 'TKT-002',
-    subject: 'Payment not processed',
-    status: 'in-progress',
-    priority: 'urgent',
-    category: 'Billing',
-    created: '2024-03-14',
-    updated: '1 hour ago',
-    description: 'I tried to make a payment for my subscription but the transaction keeps failing. I have tried multiple cards and all of them get declined. My subscription is about to expire and I don\'t want to lose access.',
-    attachments: [
-      { name: 'error-screenshot.png', size: '2.3 MB' },
-      { name: 'payment-receipt.pdf', size: '1.1 MB' }
-    ]
-  };
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  open:        { label: 'Open',        color: 'text-sky-600 bg-sky-50 border-sky-200',       icon: <Circle size={11} className="fill-sky-500 text-sky-500" /> },
+  'in-progress':{ label: 'In Progress', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: <CircleDot size={11} className="text-amber-500" /> },
+  resolved:    { label: 'Resolved',    color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={11} className="text-emerald-500" /> },
+  closed:      { label: 'Closed',      color: 'text-gray-500 bg-gray-100 border-gray-200',   icon: <MinusCircle size={11} className="text-gray-400" /> },
+};
 
-  // Mock conversation thread
-  const messages = [
-    {
-      id: 1,
-      author: 'John Doe',
-      avatar: 'JD',
-      role: 'customer',
-      message: 'I tried to make a payment for my subscription but the transaction keeps failing. I have tried multiple cards and all of them get declined. My subscription is about to expire and I don\'t want to lose access.',
-      timestamp: '2024-03-14 10:23 AM',
-      isCustomer: true
-    },
-    {
-      id: 2,
-      author: 'Sarah Johnson',
-      avatar: 'SJ',
-      role: 'support agent',
-      message: 'Hi John, I\'m sorry to hear you\'re having trouble with your payment. Let me look into this for you. Could you confirm which payment method you were trying to use?',
-      timestamp: '2024-03-14 11:45 AM',
-      isCustomer: false
-    },
-    {
-      id: 3,
-      author: 'John Doe',
-      avatar: 'JD',
-      role: 'customer',
-      message: 'I was trying to use my Visa credit card ending in 4242. It worked fine last month.',
-      timestamp: '2024-03-14 12:15 PM',
-      isCustomer: true
-    },
-    {
-      id: 4,
-      author: 'Sarah Johnson',
-      avatar: 'SJ',
-      role: 'support agent',
-      message: 'Thank you for that information. I can see the failed attempts in our system. It looks like your card might have expired. Can you verify the expiration date?',
-      timestamp: '2024-03-14 01:30 PM',
-      isCustomer: false
-    },
-    {
-      id: 5,
-      author: 'John Doe',
-      avatar: 'JD',
-      role: 'customer',
-      message: 'Oh you\'re right! My card expired last month. I completely forgot to update it. I\'ve just added my new card details. Can you try the payment again?',
-      timestamp: '2024-03-14 02:00 PM',
-      isCustomer: true
-    },
-    {
-      id: 6,
-      author: 'Sarah Johnson',
-      avatar: 'SJ',
-      role: 'support agent',
-      message: 'Perfect! I\'ve just processed the payment and it went through successfully. Your subscription is now active and you\'re all set. Is there anything else I can help you with?',
-      timestamp: '2024-03-14 02:15 PM',
-      isCustomer: false
-    }
-  ];
+const PRIORITY_CONFIG: Record<string, { label: string; dot: string }> = {
+  urgent: { label: 'Urgent', dot: 'bg-red-500'    },
+  high:   { label: 'High',   dot: 'bg-orange-400' },
+  medium: { label: 'Medium', dot: 'bg-amber-400'  },
+  low:    { label: 'Low',    dot: 'bg-emerald-400' },
+};
 
-  // Status badge component
-  const StatusBadge = ({ status }: { status: string }) => {
-    const styles = {
-      'open': 'bg-blue-100 text-blue-700',
-      'in-progress': 'bg-yellow-100 text-yellow-700',
-      'resolved': 'bg-green-100 text-green-700',
-      'closed': 'bg-gray-100 text-gray-700',
-    };
-    
-    return (
-      <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-700'}`}>
-        {status === 'in-progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  // Priority badge component
-  const PriorityBadge = ({ priority }: { priority: string }) => {
-    const styles = {
-      'urgent': 'bg-red-100 text-red-700',
-      'high': 'bg-orange-100 text-orange-700',
-      'medium': 'bg-yellow-100 text-yellow-700',
-      'low': 'bg-green-100 text-green-700',
-    };
-    
-    return (
-      <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${styles[priority as keyof typeof styles]}`}>
-        {priority.charAt(0).toUpperCase() + priority.slice(1)}
-      </span>
-    );
-  };
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Message sent:', newMessage);
-    setNewMessage('');
-  };
-
+const StatusBadge = ({ status }: { status: string }) => {
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.open;
   return (
-    <div className="min-h-screen bg-gray-50">
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${cfg.color}`}>
+      {cfg.icon}
+      {cfg.label}
+    </span>
+  );
+};
+
+const PriorityBadge = ({ priority }: { priority: string }) => {
+  const cfg = PRIORITY_CONFIG[priority] ?? PRIORITY_CONFIG.medium;
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-gray-200 bg-white text-gray-700">
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </span>
+  );
+};
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const now  = new Date();
+  const diff = now.getTime() - date.getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins  < 1)  return 'Just now';
+  if (mins  < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days  === 1) return 'Yesterday';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+/* ─── Avatar ────────────────────────────────────────────────── */
+const Avatar = ({ name, gradient }: { name: string; gradient: string }) => (
+  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${gradient}`}>
+    {name.charAt(0).toUpperCase()}
+  </div>
+);
+
+/* ─── Main Component ─────────────────────────────────────────── */
+const TicketDetailPage = () => {
+  const { id }         = useParams<{ id: string }>();
+  const navigate       = useNavigate();
+  const dispatch       = useAppDispatch();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef   = useRef<HTMLInputElement>(null);
+  const textareaRef    = useRef<HTMLTextAreaElement>(null);
+
+  const [newMessage,           setNewMessage]           = useState('');
+  const [showStatusDropdown,   setShowStatusDropdown]   = useState(false);
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const [showMoreMenu,         setShowMoreMenu]         = useState(false);
+  const [attachments,          setAttachments]          = useState<File[]>([]);
+  const [isSubmitting,         setIsSubmitting]         = useState(false);
+  const [replyTo,              setReplyTo]              = useState<{ id: number; author: string } | null>(null);
+
+  const ticket      = useAppSelector(selectCurrentTicket);
+  const messages    = useAppSelector(selectTicketMessages);
+  const isLoading   = useAppSelector(selectTicketsLoading);
+  const currentUser = useAppSelector(selectCurrentUser);
+
+  useEffect(() => {
+    if (id) {
+      dispatch(fetchTicketById(id));
+      dispatch(fetchMessages(id));
+    }
+    return () => { dispatch(clearCurrentTicket()); };
+  }, [dispatch, id]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!id) return;
+    const map: Record<string, string> = { 'Open': 'open', 'In Progress': 'in-progress', 'Resolved': 'resolved', 'Closed': 'closed' };
+    try {
+      await dispatch(updateTicket({ ticketId: id, updates: { status: map[newStatus] } })).unwrap();
+      toast.success(`Status → ${newStatus}`);
+    } catch { toast.error('Failed to update status'); }
+    setShowStatusDropdown(false);
+  };
+
+  const handlePriorityChange = async (newPriority: string) => {
+    if (!id) return;
+    try {
+      await dispatch(updateTicket({ ticketId: id, updates: { priority: newPriority.toLowerCase() } })).unwrap();
+      toast.success(`Priority → ${newPriority}`);
+    } catch { toast.error('Failed to update priority'); }
+    setShowPriorityDropdown(false);
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() && attachments.length === 0) return;
+    if (!id || !currentUser) return;
+    setIsSubmitting(true);
+    try {
+      const text = replyTo ? `@${replyTo.author} ${newMessage}` : newMessage;
+      await dispatch(addMessage({
+        ticketId: id, message: text,
+        authorId: currentUser.id, authorName: currentUser.name,
+        authorAvatar: currentUser.avatar, isInternal: false,
+      })).unwrap();
+      setNewMessage(''); setAttachments([]); setReplyTo(null);
+    } catch { toast.error('Failed to send message'); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleFileAttach  = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAttachments(prev => [...prev, ...Array.from(e.target.files || [])]);
+  };
+
+  const handleDeleteTicket = async () => {
+    if (!id || !window.confirm('Close this ticket? This cannot be undone.')) return;
+    try {
+      await dispatch(updateTicket({ ticketId: id, updates: { status: 'closed' } })).unwrap();
+      toast.success('Ticket closed');
+      navigate('/tickets');
+    } catch { toast.error('Failed to close ticket'); }
+  };
+
+  const handleReplyTo = (author: string, messageId: number) => {
+    setReplyTo({ id: messageId, author });
+    setNewMessage(`@${author} `);
+    textareaRef.current?.focus();
+  };
+
+  /* ── loading / not-found ───────────────────────────────────── */
+  if (isLoading && !ticket) return (
+    <div className="min-h-screen bg-[#f8f9fb]">
       <DashboardNavbar />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Back button */}
-        <Link 
-          to="/tickets" 
-          className="inline-flex items-center text-gray-600 hover:text-emerald-600 mb-6 transition-colors"
-        >
-          <ArrowLeft size={18} className="mr-2" />
-          Back to Tickets
+      <div className="flex items-center justify-center h-[calc(100vh-64px)]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+          <p className="text-sm text-gray-400 font-medium">Loading ticket…</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!ticket) return (
+    <div className="min-h-screen bg-[#f8f9fb]">
+      <DashboardNavbar />
+      <main className="max-w-2xl mx-auto px-4 py-24 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+          <AlertCircle size={28} className="text-gray-400" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Ticket not found</h2>
+        <p className="text-gray-500 mb-8">This ticket doesn't exist or has been removed.</p>
+        <Link to="/tickets" className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors">
+          <ArrowLeft size={16} /> Back to Tickets
         </Link>
+      </main>
+    </div>
+  );
 
-        {/* Ticket Header */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-            
-            {/* Left: Title and ID */}
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <h1 className="text-2xl font-bold text-gray-900">{ticket.subject}</h1>
-                <span className="text-sm text-gray-500">#{ticket.id}</span>
+  /* ─── render ───────────────────────────────────────────────── */
+  return (
+    <div className="min-h-screen bg-[#f8f9fb] font-sans">
+      <DashboardNavbar />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/tickets" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-emerald-600 transition-colors font-medium">
+            <ArrowLeft size={15} /> Back to Tickets
+          </Link>
+          <button onClick={() => window.location.reload()} className="p-2 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-white transition-all">
+            <RefreshCw size={16} />
+          </button>
+        </div>
+
+        <div className="grid lg:grid-cols-[1fr_300px] gap-6">
+
+          {/* ── LEFT COLUMN ─────────────────────────────────── */}
+          <div className="space-y-5">
+
+            {/* Ticket Header Card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+
+              {/* Title row */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-mono font-semibold text-gray-400 tracking-wider">
+                      #{ticket.ticket_number || ticket.id.slice(0, 8).toUpperCase()}
+                    </span>
+                  </div>
+                  <h1 className="text-xl font-bold text-gray-900 leading-tight">{ticket.subject}</h1>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <StatusBadge   status={ticket.status}     />
+                    <PriorityBadge priority={ticket.priority} />
+                    <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                      <Calendar size={11} /> {new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                    <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                      <Clock size={11} /> Updated {formatDate(ticket.updated_at)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+
+                  {/* Status dropdown */}
+                  <div className="relative">
+                    <button onClick={() => { setShowStatusDropdown(!showStatusDropdown); setShowPriorityDropdown(false); setShowMoreMenu(false); }}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors">
+                      Status <ChevronDown size={12} />
+                    </button>
+                    {showStatusDropdown && (
+                      <div className="absolute right-0 mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-20">
+                        {['Open','In Progress','Resolved','Closed'].map(s => (
+                          <button key={s} onClick={() => handleStatusChange(s)}
+                            className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                            {STATUS_CONFIG[s.toLowerCase().replace(' ', '-')]?.icon}
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Priority dropdown */}
+                  <div className="relative">
+                    <button onClick={() => { setShowPriorityDropdown(!showPriorityDropdown); setShowStatusDropdown(false); setShowMoreMenu(false); }}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors">
+                      Priority <ChevronDown size={12} />
+                    </button>
+                    {showPriorityDropdown && (
+                      <div className="absolute right-0 mt-1.5 w-36 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-20">
+                        {['Low','Medium','High','Urgent'].map(p => (
+                          <button key={p} onClick={() => handlePriorityChange(p)}
+                            className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                            <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_CONFIG[p.toLowerCase()]?.dot}`} />
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* More menu */}
+                  <div className="relative">
+                    <button onClick={() => { setShowMoreMenu(!showMoreMenu); setShowStatusDropdown(false); setShowPriorityDropdown(false); }}
+                      className="p-2 text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors">
+                      <MoreVertical size={15} />
+                    </button>
+                    {showMoreMenu && (
+                      <div className="absolute right-0 mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-20">
+                        <button className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                          <Edit size={12} /> Edit Ticket
+                        </button>
+                        <button className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                          <Star size={12} /> Star Ticket
+                        </button>
+                        <div className="my-1 border-t border-gray-100" />
+                        <button onClick={handleDeleteTicket} className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2">
+                          <Trash2 size={12} /> Close Ticket
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              
-              <div className="flex flex-wrap items-center gap-3">
-                <StatusBadge status={ticket.status} />
-                <PriorityBadge priority={ticket.priority} />
-                <span className="flex items-center text-sm text-gray-500">
-                  <Calendar size={14} className="mr-1" />
-                  Created {ticket.created}
-                </span>
-                <span className="flex items-center text-sm text-gray-500">
-                  <Clock size={14} className="mr-1" />
-                  Updated {ticket.updated}
-                </span>
+
+              {/* Description */}
+              <div className="mt-5 pt-5 border-t border-gray-100">
+                <p className="text-sm text-gray-500 font-medium mb-2">Description</p>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ticket.description}</p>
               </div>
+
+              {ticket.category && (
+                <div className="mt-4 flex items-center gap-1.5">
+                  <Tag size={12} className="text-gray-400" />
+                  <span className="text-xs text-gray-500">Category: <span className="text-gray-700 font-medium">{ticket.category}</span></span>
+                </div>
+              )}
             </div>
 
-            {/* Right: Actions */}
-            <div className="flex items-center gap-3">
-              {/* Status Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center"
-                >
-                  Change Status
-                  <ChevronDown size={16} className="ml-2" />
-                </button>
-                
-                {showStatusDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10">
-                    {['Open', 'In Progress', 'Resolved', 'Closed'].map((status) => (
-                      <button
-                        key={status}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setShowStatusDropdown(false)}
-                      >
-                        {status}
-                      </button>
-                    ))}
+            {/* ── Conversation ─────────────────────────────── */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <MessageSquare size={16} className="text-emerald-600" />
+                  <span className="font-bold text-gray-900 text-sm">Conversation</span>
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-500 rounded-full">
+                    {messages.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                  <Users size={12} /> Customer & Agent
+                </div>
+              </div>
+
+              {/* Messages feed */}
+              <div className="h-[480px] overflow-y-auto px-6 py-5 space-y-5" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center">
+                      <MessageSquare size={22} className="text-gray-300" />
+                    </div>
+                    <p className="text-sm text-gray-400">No messages yet. Start the conversation!</p>
                   </div>
+                ) : (
+                  messages.map((msg, index) => {
+                    const isAgent = msg.author_id === currentUser?.id;
+                    const isFirstInGroup = index === 0 || messages[index - 1]?.author_id !== msg.author_id;
+
+                    return (
+                      <div key={msg.id} className={`flex gap-3 ${isAgent ? 'flex-row-reverse' : ''}`}>
+
+                        {/* Avatar */}
+                        {isFirstInGroup ? (
+                          <Avatar
+                            name={msg.author_name}
+                            gradient={isAgent
+                              ? 'bg-gradient-to-br from-violet-500 to-indigo-600'
+                              : 'bg-gradient-to-br from-emerald-400 to-teal-500'}
+                          />
+                        ) : (
+                          <div className="w-8 flex-shrink-0" />
+                        )}
+
+                        <div className={`flex flex-col max-w-[72%] ${isAgent ? 'items-end' : 'items-start'}`}>
+                          {/* Meta */}
+                          {isFirstInGroup && (
+                            <div className={`flex items-center gap-2 mb-1.5 ${isAgent ? 'flex-row-reverse' : ''}`}>
+                              <span className="text-xs font-semibold text-gray-800">{msg.author_name}</span>
+                              {isAgent && (
+                                <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold">Agent</span>
+                              )}
+                              <span className="text-[11px] text-gray-400">{formatDate(msg.created_at)}</span>
+                            </div>
+                          )}
+
+                          {/* Bubble */}
+                          <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                            isAgent
+                              ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-tr-sm'
+                              : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                          }`}>
+                            <p className="whitespace-pre-wrap">{msg.message}</p>
+                            {msg.attachments?.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {msg.attachments.map((att: any, i: number) => (
+                                  <div key={i} className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg ${isAgent ? 'bg-white/20' : 'bg-white'}`}>
+                                    <File size={11} /> {att.name}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Reply */}
+                          <button
+                            onClick={() => handleReplyTo(msg.author_name, msg.id)}
+                            className={`flex items-center gap-1 text-[11px] text-gray-400 hover:text-emerald-600 mt-1.5 transition-colors ${isAgent ? 'flex-row-reverse' : ''}`}>
+                            <Reply size={11} /> Reply
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
+                <div ref={messagesEndRef} />
               </div>
-              
-              <button className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                <Edit size={18} />
-              </button>
-              
-              <button className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
-                <Trash2 size={18} />
-              </button>
+
+              {/* Reply indicator */}
+              {replyTo && (
+                <div className="px-6 py-2.5 bg-emerald-50 border-t border-emerald-100 flex items-center justify-between">
+                  <span className="text-xs text-emerald-700">
+                    Replying to <span className="font-semibold">@{replyTo.author}</span>
+                  </span>
+                  <button onClick={() => setReplyTo(null)} className="text-emerald-400 hover:text-emerald-600">
+                    <XCircle size={14} />
+                  </button>
+                </div>
+              )}
+
+              {/* Attachment preview */}
+              {attachments.length > 0 && (
+                <div className="px-6 py-2.5 border-t border-gray-100 flex flex-wrap gap-2">
+                  {attachments.map((file, i) => (
+                    <div key={i} className="flex items-center gap-1.5 bg-gray-100 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600">
+                      <File size={11} />
+                      <span className="max-w-[120px] truncate">{file.name}</span>
+                      <button type="button" onClick={() => setAttachments(attachments.filter((_, idx) => idx !== i))}
+                        className="text-gray-400 hover:text-red-500 ml-0.5">
+                        <XCircle size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Input area */}
+              <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/70">
+                <form onSubmit={handleSendMessage}>
+                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 transition-all">
+                    <textarea
+                      ref={textareaRef}
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+                      rows={3}
+                      className="w-full px-4 py-3 text-sm text-gray-800 placeholder-gray-400 resize-none outline-none bg-transparent"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); }
+                      }}
+                    />
+                    <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100">
+                      <div className="flex items-center gap-0.5">
+                        {[
+                          { icon: <Paperclip size={15} />, action: () => fileInputRef.current?.click() },
+                          { icon: <ImageIcon   size={15} /> },
+                          { icon: <Mic         size={15} /> },
+                          { icon: <Smile       size={15} /> },
+                        ].map((btn, i) => (
+                          <button key={i} type="button" onClick={btn.action}
+                            className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                            {btn.icon}
+                          </button>
+                        ))}
+                        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileAttach} />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={(!newMessage.trim() && attachments.length === 0) || isSubmitting}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-emerald-200 hover:shadow-md transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                      >
+                        {isSubmitting
+                          ? <RefreshCw size={13} className="animate-spin" />
+                          : <Send size={13} />}
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Description</h3>
-            <p className="text-gray-600">{ticket.description}</p>
-          </div>
+          {/* ── RIGHT SIDEBAR ────────────────────────────────── */}
+          <div className="space-y-4">
 
-          {/* Attachments */}
-          {ticket.attachments && ticket.attachments.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                <Paperclip size={16} className="mr-2" />
-                Attachments
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {ticket.attachments.map((file, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer group"
-                  >
-                    <div className="p-2 bg-white rounded-lg mr-3">
-                      <Paperclip size={16} className="text-gray-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 group-hover:text-emerald-600 transition-colors">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-gray-500">{file.size}</p>
-                    </div>
-                    <Download size={16} className="ml-4 text-gray-400 group-hover:text-emerald-500" />
+            {/* Customer Info */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">Customer</p>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  {ticket.customer_name?.charAt(0) || 'C'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{ticket.customer_name || 'Customer'}</p>
+                  <p className="text-xs text-gray-400 truncate">{ticket.customer_email || 'customer@example.com'}</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-3 space-y-2.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-400">Total Tickets</span>
+                  <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">12</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-400">Member Since</span>
+                  <span className="text-xs font-semibold text-gray-700">Jan 2024</span>
+                </div>
+              </div>
+              <button className="w-full mt-4 px-3 py-2 text-xs font-semibold text-emerald-600 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
+                View Profile
+              </button>
+            </div>
+
+            {/* Assigned Agent */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">Assigned Agent</p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                    {ticket.assigned_to?.charAt(0) || '?'}
                   </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{ticket.assigned_to || 'Unassigned'}</p>
+                    <p className="text-xs text-gray-400">{ticket.assigned_to ? 'Support Agent' : 'No agent assigned'}</p>
+                  </div>
+                </div>
+                <button className="text-xs font-semibold text-violet-600 hover:text-violet-800 flex-shrink-0 transition-colors">
+                  Reassign
+                </button>
+              </div>
+            </div>
+
+            {/* Ticket Details */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">Details</p>
+              <div className="space-y-3">
+                {[
+                  { label: 'Category',      value: ticket.category || 'General', capitalize: true },
+                  { label: 'Created',       value: new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
+                  { label: 'Last Updated',  value: formatDate(ticket.updated_at) },
+                ].map(({ label, value, capitalize }) => (
+                  <div key={label} className="flex justify-between items-start">
+                    <span className="text-xs text-gray-400">{label}</span>
+                    <span className={`text-xs font-semibold text-gray-700 text-right max-w-[55%] ${capitalize ? 'capitalize' : ''}`}>{value}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-400">SLA</span>
+                  <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 size={11} /> 2 hours
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Suggested Articles */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">Suggested Articles</p>
+              <div className="space-y-1">
+                {[
+                  'How to update payment method',
+                  'Understanding billing cycles',
+                  'Payment troubleshooting guide',
+                ].map((article) => (
+                  <a key={article} href="#"
+                    className="flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+                    <File size={12} className="text-gray-300 group-hover:text-emerald-500 mt-0.5 flex-shrink-0 transition-colors" />
+                    <span className="text-xs text-gray-600 group-hover:text-emerald-600 transition-colors leading-relaxed">{article}</span>
+                  </a>
                 ))}
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Conversation Thread */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center">
-              <MessageSquare size={20} className="mr-2 text-emerald-600" />
-              Conversation
-              <span className="ml-3 text-sm font-normal text-gray-500">
-                {messages.length} messages
-              </span>
-            </h2>
-          </div>
-
-          {/* Messages */}
-          <div className="p-6 space-y-6">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.isCustomer ? 'justify-start' : 'justify-end'}`}
-              >
-                <div className={`flex max-w-3xl ${msg.isCustomer ? '' : 'flex-row-reverse'}`}>
-                  
-                  {/* Avatar */}
-                  <div className={`flex-shrink-0 ${msg.isCustomer ? 'mr-4' : 'ml-4'}`}>
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm ${
-                      msg.isCustomer 
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500' 
-                        : 'bg-gradient-to-r from-purple-500 to-indigo-500'
-                    }`}>
-                      {msg.avatar}
-                    </div>
-                  </div>
-
-                  {/* Message Content */}
-                  <div className={`flex-1 ${msg.isCustomer ? '' : 'items-end'}`}>
-                    <div className={`flex items-center mb-1 ${msg.isCustomer ? '' : 'flex-row-reverse'}`}>
-                      <span className="text-sm font-medium text-gray-900">
-                        {msg.author}
-                      </span>
-                      <span className="text-xs text-gray-500 ml-2">
-                        {msg.timestamp}
-                      </span>
-                      {!msg.isCustomer && (
-                        <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                          Agent
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className={`rounded-2xl p-4 ${
-                      msg.isCustomer
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
-                    }`}>
-                      <p className="text-sm leading-relaxed">
-                        {msg.message}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Reply Box */}
-          <div className="px-6 py-5 border-t border-gray-200 bg-gray-50">
-            <form onSubmit={handleSendMessage}>
-              <div className="flex items-end space-x-4">
-                <div className="flex-1">
-                  <textarea
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type your reply..."
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none resize-none"
-                  />
-                  
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center space-x-3">
-                      <button
-                        type="button"
-                        className="flex items-center text-sm text-gray-600 hover:text-emerald-600 transition-colors"
-                      >
-                        <Paperclip size={16} className="mr-1" />
-                        Attach files
-                      </button>
-                    </div>
-                    
-                    <button
-                      type="submit"
-                      disabled={!newMessage.trim()}
-                      className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-emerald-200 transition-all duration-300 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Send size={16} className="mr-2" />
-                      Send Reply
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        {/* Ticket Info Sidebar - For desktop you could add this as a right column */}
-        <div className="mt-6 grid md:grid-cols-3 gap-6">
-          {/* Customer Info */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center">
-              <User size={16} className="mr-2 text-emerald-600" />
-              Customer Details
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white text-xs font-medium mr-3">
-                  JD
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">John Doe</p>
-                  <p className="text-xs text-gray-500">john.doe@example.com</p>
-                </div>
-              </div>
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Account created</p>
-                <p className="text-sm text-gray-900">March 1, 2024</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Agent Info */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center">
-              <User size={16} className="mr-2 text-purple-600" />
-              Assigned Agent
-            </h3>
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-medium mr-3">
-                SJ
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Sarah Johnson</p>
-                <p className="text-xs text-gray-500">Support Specialist</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Ticket Metadata */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center">
-              <Tag size={16} className="mr-2 text-emerald-600" />
-              Ticket Details
-            </h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Category:</span>
-                <span className="text-gray-900 font-medium">{ticket.category}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Created:</span>
-                <span className="text-gray-900">{ticket.created}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Last updated:</span>
-                <span className="text-gray-900">{ticket.updated}</span>
-              </div>
-            </div>
           </div>
         </div>
       </main>

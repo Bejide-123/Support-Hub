@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast"; // Added toast import
-// import { useNavigate } from 'react-router-dom'; // Add this import
+import { useNavigate } from 'react-router-dom'; // Add this import
 import {
   Search,
   ChevronRight,
@@ -28,8 +28,9 @@ import { authAPI } from "../features/Auth/authApi";
 import type { User } from "../features/Auth/authApi";
 import AssignAgentsModal from "../components/AssignAgentsModal";
 
+
 const AgentTicketQueue = () => {
-  // const navigate = useNavigate(); // Add this hook
+  const navigate = useNavigate(); // Add this hook
   const dispatch = useAppDispatch();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
@@ -704,7 +705,7 @@ const AgentTicketQueue = () => {
                         className={`hover:bg-gray-50 transition-colors cursor-pointer group ${
                           ticket.priority === "urgent" ? "bg-red-50/30" : ""
                         }`}
-                        // onClick={() => navigate(`/agent/tickets/${ticket.id}`)} // Fixed navigation
+                        onClick={() => navigate(`/agent/tickets/${ticket.id}`)} // Fixed navigation
                       >
                         <td
                           className="px-6 py-4"
@@ -813,7 +814,7 @@ const AgentTicketQueue = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" >
                             <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
                               {/* {ticket.message_count || 0} */}
                             </span>

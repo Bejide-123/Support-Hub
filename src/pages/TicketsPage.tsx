@@ -1,5 +1,6 @@
 // pages/TicketsPage.tsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Ticket, 
   Search, 
@@ -25,6 +26,7 @@ const TicketsPage = () => {
   const [sortBy, setSortBy] = useState('newest');
 
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   const user = useAppSelector(selectCurrentUser);
   const tickets = useAppSelector(selectAllTickets);
@@ -281,7 +283,7 @@ const TicketsPage = () => {
                     <tr 
                       key={ticket.id} 
                       className="hover:bg-gray-50 transition-colors cursor-pointer group"
-                      onClick={() => window.location.href = `/tickets/${ticket.id}`} // Navigate to ticket details page
+                      onClick={() => navigate(`/tickets/${ticket.id}`)} // Navigate to ticket details page
                     >
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-gray-900">{ticket.ticket_number}</span>

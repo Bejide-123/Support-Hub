@@ -11,7 +11,7 @@ import TicketDetailPage from "./pages/TicketDetailsPage";
 import HelpCenterPage from "./pages/HelpCenterPage";
 import AgentDashboard from "./pages/AgentDashboard";
 import AgentTicketQueue from "./pages/AgentTicketsPage";
-// import AgentTicketDetailPage from './pages/AgentTicketDetails';
+import AgentTicketDetailPage from './pages/AgentTicketDetails';
 // import CustomerProfilePage from './pages/CustomerPage';
 import Analytics from "./pages/Analytics";
 import AgentSettings from "./pages/Settings";
@@ -67,7 +67,7 @@ const App = () => {
           {/* User Routes */}
           <Route path="/dashboard" element={<UserDashboard />} />
           <Route path="/tickets" element={<TicketsPage />} />
-          <Route path="/ticket-details" element={<TicketDetailPage />} />
+          <Route path="/tickets/:id" element={<TicketDetailPage />} />
           <Route path="/faq" element={<HelpCenterPage />} />
           <Route path="/profile" element={<UserProfilePage />} />
           <Route path="/settings" element={<UserSettingsPage />} />
@@ -75,12 +75,12 @@ const App = () => {
           {/* Agent Routes */}
           <Route path="/agent/dashboard" element={<AgentDashboard />} />
           <Route path="/agent/tickets" element={<AgentTicketQueue />} />
-          {/* <Route
-            path="/agent/tickets-details"
+          <Route
+            path="/agent/tickets/:id"
             element={
                 <AgentTicketDetailPage />
             }
-          /> */}
+          />
           <Route path="/agent/customers" element={<CustomerListPage />} />
           {/* <Route
             path="/agent/customers/:id"
