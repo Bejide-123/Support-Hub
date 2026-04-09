@@ -1,6 +1,5 @@
 // pages/UserProfilePage.tsx
-import { useState } from 'react';
-// import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   User,
   Clock,
@@ -22,31 +21,54 @@ import {
   Settings,
 } from 'lucide-react';
 import DashboardNavbar from '../components/DashboardNavbar';
-import { useAppSelector } from '../store/hooks';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { selectCurrentUser, updateProfile } from '../features/Auth/authSlice';
+import toast from 'react-hot-toast';
 
 const UserProfilePage = () => {
+  const dispatch = useAppDispatch();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
 
-  const { user } = useAppSelector((state) => state.auth);
+  const user = useAppSelector(selectCurrentUser);
 
-  // Profile data
+  // Profile data - initialize from Redux user
   const [profile, setProfile] = useState({
-    name: 'John Doe',
-    email: 'john.doe@email.com',
-    phone: '+1 (555) 123-4567',
-    company: 'Acme Inc.',
-    position: 'Product Manager',
-    location: 'San Francisco, CA',
-    avatar: 'JD',
-    bio: 'Product manager at Acme Inc. Love building great products and helping teams succeed.',
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    position: '',
+    location: '',
+    avatar: '',
+    bio: '',
     timezone: 'America/Los_Angeles',
     language: 'en',
     dateFormat: 'MM/DD/YYYY',
     timeFormat: '12h'
   });
+
+  // Initialize profile from user when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        company: user.company || '',
+        position: user.position || '',
+        location: user.location || '',
+        avatar: user.avatar || user.name?.charAt(0) || 'U',
+        bio: user.bio || '',
+        timezone: user.timezone || 'America/Los_Angeles',
+        language: user.language || 'en',
+        dateFormat: user.dateFormat || 'MM/DD/YYYY',
+        timeFormat: user.timeFormat || '12h'
+      });
+    }
+  }, [user]);
 
   // Security settings
   const [security, setSecurity] = useState({
@@ -80,15 +102,72 @@ const UserProfilePage = () => {
     { id: 4, action: 'Changed password', time: '1 week ago' },
   ];
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      setIsEditing(false);
+    
+    try {
+      // Dispatch update to Redux
+      const result = await dispatch(updateProfile({
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        company: profile.company,
+        position: profile.position,
+        location: profile.location,
+        bio: profile.bio,
+        timezone: profile.timezone,
+        language: profile.language,
+        dateFormat: profile.dateFormat,
+        timeFormat: profile.timeFormat
+      })).unwrap();
+      
+      // Show success message
+      toast.success('Profile updated successfully!');
       setShowSuccess(true);
+      setIsEditing(false);
+      
+      // Hide success message after 3 seconds
       setTimeout(() => setShowSuccess(false), 3000);
-    }, 1000);
+      
+    } catch (error) {
+      toast.error('Failed to update profile');
+      console.error('Update error:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const handleCancel = () => {
+    // Reset form to current user data
+    if (user) {
+      setProfile({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        company: user.company || '',
+        position: user.position || '',
+        location: user.location || '',
+        avatar: user.avatar || user.name?.charAt(0) || 'U',
+        bio: user.bio || '',
+        timezone: user.timezone || 'America/Los_Angeles',
+        language: user.language || 'en',
+        dateFormat: user.dateFormat || 'MM/DD/YYYY',
+        timeFormat: user.timeFormat || '12h'
+      });
+    }
+    setIsEditing(false);
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <DashboardNavbar />
+        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -127,7 +206,7 @@ const UserProfilePage = () => {
             ) : (
               <>
                 <button
-                  onClick={() => setIsEditing(false)}
+                  onClick={handleCancel}
                   className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center"
                 >
                   <X size={16} className="mr-2" />
@@ -173,9 +252,9 @@ const UserProfilePage = () => {
                     </button>
                   )}
                 </div>
-                <h2 className="text-xl font-bold text-white">{user?.name}</h2>
-                <p className="text-emerald-100 text-sm mt-1">{user?.position}</p>
-                <p className="text-emerald-100 text-xs mt-1">{user?.company}</p>
+                <h2 className="text-xl font-bold text-white">{profile.name}</h2>
+                <p className="text-emerald-100 text-sm mt-1">{profile.position}</p>
+                <p className="text-emerald-100 text-xs mt-1">{profile.company}</p>
               </div>
 
               {/* Quick Stats */}
@@ -282,12 +361,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={user?.name}
+                            value={profile.name}
                             onChange={(e) => setProfile({...profile, name: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{user?.name}</p>
+                          <p className="text-gray-900 py-2.5">{profile.name}</p>
                         )}
                       </div>
                       
@@ -298,12 +377,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="email"
-                            value={user?.email}
+                            value={profile.email}
                             onChange={(e) => setProfile({...profile, email: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{user?.email}</p>
+                          <p className="text-gray-900 py-2.5">{profile.email}</p>
                         )}
                       </div>
                       
@@ -314,12 +393,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="tel"
-                            value={user?.phone}
+                            value={profile.phone}
                             onChange={(e) => setProfile({...profile, phone: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{user?.phone}</p>
+                          <p className="text-gray-900 py-2.5">{profile.phone}</p>
                         )}
                       </div>
                       
@@ -330,12 +409,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={user?.location}
+                            value={profile.location}
                             onChange={(e) => setProfile({...profile, location: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{user?.location}</p>
+                          <p className="text-gray-900 py-2.5">{profile.location}</p>
                         )}
                       </div>
                       
@@ -346,12 +425,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={user?.company}
+                            value={profile.company}
                             onChange={(e) => setProfile({...profile, company: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{user?.company}</p>
+                          <p className="text-gray-900 py-2.5">{profile.company}</p>
                         )}
                       </div>
                       
@@ -362,12 +441,12 @@ const UserProfilePage = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={user?.position}
+                            value={profile.position}
                             onChange={(e) => setProfile({...profile, position: e.target.value})}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           />
                         ) : (
-                          <p className="text-gray-900 py-2.5">{user?.position}</p>
+                          <p className="text-gray-900 py-2.5">{profile.position}</p>
                         )}
                       </div>
                     </div>
@@ -378,13 +457,13 @@ const UserProfilePage = () => {
                       </label>
                       {isEditing ? (
                         <textarea
-                          value={user?.bio}
+                          value={profile.bio}
                           onChange={(e) => setProfile({...profile, bio: e.target.value})}
                           rows={4}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
                         />
                       ) : (
-                        <p className="text-gray-600 p-3 bg-gray-50 rounded-lg">{user?.bio}</p>
+                        <p className="text-gray-600 p-3 bg-gray-50 rounded-lg">{profile.bio}</p>
                       )}
                     </div>
 

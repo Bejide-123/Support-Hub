@@ -278,6 +278,10 @@ const AgentTicketQueue = () => {
     setSelectedTickets([]);
   };
 
+  const Refresh = () => {
+    dispatch(fetchTickets({ status: "", priority: "" }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AgentNavbar />
@@ -306,6 +310,7 @@ const AgentTicketQueue = () => {
             <button
               onClick={() => {
                 clearFilters();
+                Refresh()
                 // You can add refresh logic here
               }}
               className="px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"

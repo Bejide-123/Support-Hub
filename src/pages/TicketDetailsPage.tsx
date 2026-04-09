@@ -40,7 +40,7 @@ import {
   selectTicketsLoading,
   clearCurrentTicket,
 } from '../features/Tickets/ticketsSlice';
-import { selectCurrentUser } from '../features/Auth/authSlice';
+import { selectCurrentUser, getUserById, selectUserById } from '../features/Auth/authSlice';
 import toast from 'react-hot-toast';
 
 /* ─── tiny helpers ─────────────────────────────────────────── */
@@ -121,6 +121,23 @@ const TicketDetailPage = () => {
   const messages    = useAppSelector(selectTicketMessages);
   const isLoading   = useAppSelector(selectTicketsLoading);
   const currentUser = useAppSelector(selectCurrentUser);
+
+  const assignedAgent = useAppSelector(state => ticket?.assigned_to ? selectUserById(state, ticket.assigned_to) : null);
+  const customer = useAppSelector(state => ticket?.customer_id ? selectUserById(state, ticket.customer_id) : null);
+
+  useEffect(() => {
+    if (ticket?.customer_id && !customer) {
+      dispatch(getUserById(ticket.customer_id));
+    }
+  }, [dispatch, ticket?.customer_id, customer]);
+
+
+  useEffect(() => {
+      if (ticket?.assigned_to && !assignedAgent) {
+        dispatch(getUserById(ticket.assigned_to));
+      }
+    }, [dispatch, ticket?.assigned_to, assignedAgent]);
+  
 
   useEffect(() => {
     if (id) {
@@ -516,11 +533,11 @@ const TicketDetailPage = () => {
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">Customer</p>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                  {ticket.customer_name?.charAt(0) || 'C'}
+                  {customer?.name?.charAt(0) || 'C'}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{ticket.customer_name || 'Customer'}</p>
-                  <p className="text-xs text-gray-400 truncate">{ticket.customer_email || 'customer@example.com'}</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{customer?.name || 'Customer'}</p>
+                  <p className="text-xs text-gray-400 truncate">{customer?.email || 'customer@example.com'}</p>
                 </div>
               </div>
               <div className="border-t border-gray-100 pt-3 space-y-2.5">
@@ -547,13 +564,11 @@ const TicketDetailPage = () => {
                     {ticket.assigned_to?.charAt(0) || '?'}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{ticket.assigned_to || 'Unassigned'}</p>
-                    <p className="text-xs text-gray-400">{ticket.assigned_to ? 'Support Agent' : 'No agent assigned'}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{assignedAgent?.name || 'Unassigned'}</p>
+                    <p className="text-xs text-gray-400">{assignedAgent?.name ? 'Support Agent' : 'No agent assigned'}</p>
                   </div>
                 </div>
-                <button className="text-xs font-semibold text-violet-600 hover:text-violet-800 flex-shrink-0 transition-colors">
-                  Reassign
-                </button>
+                
               </div>
             </div>
 

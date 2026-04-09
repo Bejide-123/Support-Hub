@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import DashboardNavbar from '../components/DashboardNavbar';
 import NewTicketModal from '../components/NewTicketModal';
-import { fetchTickets, selectAllTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
+import { fetchUserTickets, selectUserTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
 import { selectCurrentUser } from '../features/Auth/authSlice';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 
@@ -29,13 +29,13 @@ const TicketsPage = () => {
   const navigate = useNavigate();
 
   const user = useAppSelector(selectCurrentUser);
-  const tickets = useAppSelector(selectAllTickets);
+  const tickets = useAppSelector((state) => selectUserTickets(state, user?.id));
   const isLoading = useAppSelector(selectTicketsLoading);
   const ticketStats = useAppSelector(selectTicketStats);
 
   useEffect(() => {
     if (user?.id) {
-      dispatch(fetchTickets({ status: '', priority: '' }));
+      dispatch(fetchUserTickets(user.id));
       dispatch(getUserTicketStats(user.id));
     }
   }, [dispatch, user?.id]);
@@ -85,7 +85,7 @@ const TicketsPage = () => {
   const filteredTickets = tickets.filter(ticket => {
     // Search filter
     const matchesSearch = ticket.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         ticket.id?.toLowerCase().includes(searchQuery.toLowerCase());
+                        ticket.id?.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Status filter
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;

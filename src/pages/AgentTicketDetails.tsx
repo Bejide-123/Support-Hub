@@ -16,7 +16,7 @@ import {
   fetchTicketById, fetchMessages, addMessage, updateTicket,
   selectCurrentTicket, selectTicketMessages, selectTicketsLoading
 } from '../features/Tickets/ticketsSlice';
-import { selectCurrentUser } from '../features/Auth/authSlice';
+import { selectCurrentUser, getUserById, selectUserById } from '../features/Auth/authSlice';
 import toast from 'react-hot-toast';
 
 /* ── Config maps ──────────────────────────────────────────────── */
@@ -131,11 +131,27 @@ const AgentTicketDetailPage = () => {
   const isLoading   = useAppSelector(selectTicketsLoading);
   const currentUser = useAppSelector(selectCurrentUser);
 
+  const assignedAgent = useAppSelector(state => ticket?.assigned_to ? selectUserById(state, ticket.assigned_to) : null);
+  const customer = useAppSelector(state => ticket?.customer_id ? selectUserById(state, ticket.customer_id) : null);
+
+  useEffect(() => {
+    if(ticket?.customer_id && !customer) {
+      dispatch(getUserById(ticket.customer_id));
+    }
+  }, [dispatch, ticket?.customer_id, customer]);
+
+  useEffect(() => {
+    if (ticket?.assigned_to && !assignedAgent) {
+      dispatch(getUserById(ticket.assigned_to));
+    }
+  }, [dispatch, ticket?.assigned_to, assignedAgent]);
+
   useEffect(() => {
     if (id) { dispatch(fetchTicketById(id)); dispatch(fetchMessages(id)); }
   }, [dispatch, id]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
 
   /* handlers */
   const changeStatus = async (s: string) => {
@@ -601,10 +617,10 @@ const AgentTicketDetailPage = () => {
                 <div className="relative">
                   <button onClick={() => toggleDd('assign')}
                     className="w-full flex items-center gap-2.5 p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-colors">
-                    <Avatar name={ticket.assigned_to || '?'} size={7} gradient="bg-gradient-to-br from-violet-500 to-indigo-600" />
+                    <Avatar name={assignedAgent?.name || ticket.assigned_to || '?'} size={7} gradient="bg-gradient-to-br from-violet-500 to-indigo-600" />
                     <div className="flex-1 text-left min-w-0">
-                      <p className="text-xs font-bold text-gray-800 truncate">{ticket.assigned_to || 'Unassigned'}</p>
-                      <p className="text-[10px] text-gray-400">{ticket.assigned_to ? 'Support Agent' : 'Click to assign'}</p>
+                      <p className="text-xs font-bold text-gray-800 truncate">{assignedAgent?.name || 'Unassigned'}</p>
+                      <p className="text-[10px] text-gray-400">{assignedAgent?.name ? 'Support Agent' : 'Click to assign'}</p>
                     </div>
                     <ChevronDown size={13} className="text-gray-400 flex-shrink-0" />
                   </button>
@@ -680,11 +696,11 @@ const AgentTicketDetailPage = () => {
 
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-11 h-11 rounded-full bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center text-white font-bold flex-shrink-0">
-                  {ticket.customer_name?.charAt(0) || 'C'}
+                  {customer?.name?.charAt(0) || 'C'}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate">{ticket.customer_name || 'Customer'}</p>
-                  <p className="text-xs text-gray-500 truncate">{ticket.customer_company || 'Individual'}</p>
+                  <p className="text-sm font-bold text-gray-900 truncate">{customer?.name || 'Customer'}</p>
+                  {/* <p className="text-xs text-gray-500 truncate">{ticket.customer_company || 'Individual'}</p> */}
                   <div className="flex items-center gap-1 mt-0.5">
                     <Star size={11} className="text-amber-400 fill-amber-400" />
                     <span className="text-[11px] text-gray-500">98% satisfaction</span>

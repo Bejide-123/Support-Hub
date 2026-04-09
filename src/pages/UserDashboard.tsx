@@ -12,7 +12,7 @@ import {
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import DashboardNavbar from '../components/DashboardNavbar';
 import NewTicketModal from '../components/NewTicketModal';
-import { fetchTickets, selectAllTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
+import { fetchUserTickets, selectUserTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
 import { selectCurrentUser } from '../features/Auth/authSlice';
 
 // Status badge component (move this outside the main component)
@@ -41,13 +41,13 @@ const UserDashboard = () => {
 
   // Get user from Redux state
   const user = useAppSelector(selectCurrentUser);
-  const tickets = useAppSelector(selectAllTickets);
+  const tickets = useAppSelector((state) => selectUserTickets(state, user?.id));
   const isLoading = useAppSelector(selectTicketsLoading);
   const ticketStats = useAppSelector(selectTicketStats);
 
   useEffect(() => {
     if (user?.id) {
-      dispatch(fetchTickets({ status: '', priority: '' }));
+      dispatch(fetchUserTickets(user.id));
       dispatch(getUserTicketStats(user.id));
     }
   }, [dispatch, user?.id]);

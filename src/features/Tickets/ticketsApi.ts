@@ -99,6 +99,56 @@ export const ticketsAPI = {
     return data as Ticket;
   },
 
+  fetchUserTickets: async (userId: string): Promise<Ticket[]> => {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*')
+      .eq('customer_id', userId)
+      .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as Ticket[];
+  },
+
+   fetchAgentTickets: async (agentId: string): Promise<Ticket[]> => {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*')
+      .eq('assigned_to', agentId)
+      .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as Ticket[];
+  },
+
+   fetchUnassignedTickets: async (): Promise<Ticket[]> => {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*')
+      .is('assigned_to', null)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as Ticket[];
+  },
+
+  selectUserTickets: async (userId: string, status?: string): Promise<Ticket[]> => {
+    let query = supabase
+      .from('tickets')
+      .select('*')
+      .eq('customer_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data as Ticket[];
+  },
+
+  
   // Create a new ticket
   createTicket: async (ticketData: CreateTicketData, userId: string): Promise<Ticket> => {
     const { data, error } = await supabase

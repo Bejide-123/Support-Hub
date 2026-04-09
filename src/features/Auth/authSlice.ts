@@ -6,15 +6,17 @@ import type { User, LoginCredentials, SignupData } from './authApi';
 import type { RootState } from '../../store/index';
 
 export interface AuthState {
-  user: User | null;
+  user: User ;
+  users: Record<string, User>; // Add this to cache users by ID
   isLoading: boolean;
   error: string | null;
-  initialized: boolean; // Track if we've checked for existing session
-  isAuthenticated: boolean; // Track if user is authenticated
+  initialized: boolean;
+  isAuthenticated: boolean;
 }
 
 const initialState: AuthState = {
-  user: null,
+  user: {} as User,
+  users: {}, // Initialize empty object for caching
   isLoading: false,
   error: null,
   initialized: false,
@@ -129,8 +131,18 @@ export const demoLogin = createAsyncThunk(
   }
 );
 
-
-
+// Fetch user by ID - stores in cache without overwriting current user
+export const getUserById = createAsyncThunk(
+  'auth/getUserById',
+  async (userId: string, { rejectWithValue }) => {
+    try {
+      const user = await authAPI.getProfileById(userId);
+      return { userId, user };
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
 
 const authSlice = createSlice({
   name: 'auth',
@@ -147,6 +159,10 @@ const authSlice = createSlice({
       state.initialized = true;
       state.isAuthenticated = !!action.payload;
     },
+    // Clear cached users (optional, for logout)
+    clearUsersCache: (state) => {
+      state.users = {};
+    },
   },
   extraReducers: (builder) => {
     // Login
@@ -159,6 +175,10 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.initialized = true;
       state.isAuthenticated = !!action.payload;
+      // Also cache the user
+      if (action.payload) {
+        state.users[action.payload.id] = action.payload;
+      }
     });
     builder.addCase(login.rejected, (state, action) => {
       state.isLoading = false;
@@ -177,6 +197,9 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.initialized = true;
       state.isAuthenticated = !!action.payload;
+      if (action.payload) {
+        state.users[action.payload.id] = action.payload;
+      }
     });
     builder.addCase(signup.rejected, (state, action) => {
       state.isLoading = false;
@@ -191,6 +214,7 @@ const authSlice = createSlice({
     });
     builder.addCase(logout.fulfilled, (state) => {
       state.user = null;
+      state.users = {}; // Clear cache on logout
       state.isLoading = false;
       state.initialized = true;
       state.isAuthenticated = false;
@@ -210,6 +234,9 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.initialized = true;
       state.isAuthenticated = !!action.payload;
+      if (action.payload) {
+        state.users[action.payload.id] = action.payload;
+      }
     });
     builder.addCase(getCurrentUser.rejected, (state) => {
       state.isLoading = false;
@@ -225,6 +252,9 @@ const authSlice = createSlice({
     builder.addCase(updateProfile.fulfilled, (state, action) => {
       state.isLoading = false;
       state.user = action.payload;
+      if (action.payload) {
+        state.users[action.payload.id] = action.payload;
+      }
     });
     builder.addCase(updateProfile.rejected, (state, action) => {
       state.isLoading = false;
@@ -241,11 +271,26 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.initialized = true;
       state.isAuthenticated = !!action.payload;
+      if (action.payload) {
+        state.users[action.payload.id] = action.payload;
+      }
     });
     builder.addCase(demoLogin.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload as string;
       state.isAuthenticated = false;
+    });
+
+    // Get User By ID - stores in cache without overwriting current user
+    builder.addCase(getUserById.pending, (state) => {
+      // Don't set global loading for fetching other users
+    });
+    builder.addCase(getUserById.fulfilled, (state, action) => {
+      const { userId, user } = action.payload;
+      state.users[userId] = user; // Store in cache
+    });
+    builder.addCase(getUserById.rejected, (state, action) => {
+      console.error('Failed to fetch user:', action.payload);
     });
 
     // Password Reset
@@ -263,9 +308,11 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser } = authSlice.actions;
+export const { clearError, setUser, clearUsersCache } = authSlice.actions;
 
-// Selector to get the current user
+// Selectors
 export const selectCurrentUser = (state: RootState) => state.auth.user;
+export const selectUserById = (state: RootState, userId: string) => state.auth.users[userId];
+export const selectAllUsers = (state: RootState) => Object.values(state.auth.users);
 
 export default authSlice.reducer;

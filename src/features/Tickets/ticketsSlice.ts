@@ -68,6 +68,21 @@ export const fetchTickets = createAsyncThunk(
   }
 );
 
+export const fetchUserTickets = createAsyncThunk(
+  'tickets/fetchUserTickets',
+  async (userId: string, { rejectWithValue }) => {
+    try {      const tickets = await ticketsAPI.fetchUserTickets(userId);
+      return tickets;
+    } catch (error) {
+      return rejectWithValue(handleError(error));
+    }
+  }
+);
+
+export const selectUserTickets = (state: RootState, userId: string) => {
+  return state.tickets.tickets.filter(ticket => ticket.customer_id === userId);
+};
+
 // Fetch a single ticket by ID
 export const fetchTicketById = createAsyncThunk(
   'tickets/fetchTicketById',

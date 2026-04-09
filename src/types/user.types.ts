@@ -24,6 +24,10 @@ export interface User {
   avatar?: string;
   bio?: string;
   timezone?: string;
+  language?: string;
+  dateFormat?: DateFormat;
+  timeFormat?: TimeFormat;
+  role: "agent" | "admin";
 }
 
 export interface UserProfile {

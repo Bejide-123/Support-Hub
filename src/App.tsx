@@ -94,7 +94,7 @@ const App = () => {
         </Route>
 
         {/* Catch-all redirect for any unmatched routes */}
-        <Route path="*" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+        {/* <Route path="*" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} /> */}
       </Routes>
     </>
   );
