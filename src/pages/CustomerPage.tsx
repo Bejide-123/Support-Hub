@@ -1,7 +1,7 @@
 // pages/CustomerProfilePage.tsx
 import { useState } from 'react';
 import {  Link } from 'react-router-dom';
-// import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Mail,
@@ -32,7 +32,7 @@ import {
 import AgentNavbar from '../components/AgentNavbar';
 
 const CustomerProfilePage = () => {
-  // const { id } = useParams();
+  const { id } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({

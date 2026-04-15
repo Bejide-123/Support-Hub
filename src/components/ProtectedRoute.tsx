@@ -11,7 +11,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   void allowedRoles;
   const { isAuthenticated, user, isLoading, initialized } = useSelector((state: RootState) => state.auth);
 
-  // Show loading while checking auth status
+  // Show loading while checking auth status (only for auth operations, not data operations)
   if (isLoading) {
     return <div>Loading authentication...</div>;
   }

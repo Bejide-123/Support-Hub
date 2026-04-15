@@ -61,7 +61,7 @@ export const authAPI = {
           id: authData.user.id,
           email: data.email,
           name: data.name,
-          role: 'user', // Default role
+          role: 'Customer', // Default role
           company: data.company,
           phone: data.phone,
         },
@@ -127,6 +127,16 @@ export const authAPI = {
     return profile as User;
   },
 
+  getAllCustomers: async() => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'Customer')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as User[];
+  },
   // Update profile
   updateProfile: async (userId: string, data: Partial<User>) => {
     const { data: profile, error } = await supabase
@@ -160,8 +170,8 @@ export const authAPI = {
   },
 
   // Demo login helper (for development)
-  demoLogin: async (role: 'user' | 'agent') => {
-    if (role === 'user') {
+  demoLogin: async (role: 'Customer' | 'agent') => {
+    if (role === 'Customer') {
       return authAPI.login({ email: 'customer@example.com', password: 'password123' });
     } else {
       return authAPI.login({ email: 'agent@supporthub.com', password: 'password123' });

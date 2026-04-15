@@ -250,6 +250,20 @@ const ticketsSlice = createSlice({
     clearTicketsState: () => initialState,
   },
   extraReducers: (builder) => {
+    // ========== FETCH USER TICKETS ==========
+    builder.addCase(fetchUserTickets.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(fetchUserTickets.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.tickets = action.payload;
+    });
+    builder.addCase(fetchUserTickets.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
     // ========== FETCH TICKETS ==========
     builder.addCase(fetchTickets.pending, (state) => {
       state.isLoading = true;

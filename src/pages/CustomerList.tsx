@@ -1,5 +1,4 @@
-// pages/CustomerListPage.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate
 import {
   Users,
@@ -21,17 +20,53 @@ import {
   Award
 } from 'lucide-react';
 import AgentNavbar from '../components/AgentNavbar';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { getAllCustomers, selectAllCustomers } from '../features/Auth/authSlice';
 
 const CustomerListPage = () => {
   const navigate = useNavigate(); // Added for navigation
+  const dispatch = useAppDispatch();
+  
+  // Get customers from Redux
+  const reduxCustomers = useAppSelector(selectAllCustomers);
+  const isLoadingCustomers = useAppSelector(state => state.auth.isLoadingData);
+  const error = useAppSelector(state => state.auth.error);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTier, setSelectedTier] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState('grid'); // grid or list
 
-  // Mock customers data
-  const customers = [
+  // Fetch customers on component mount
+  useEffect(() => {
+    dispatch(getAllCustomers());
+  }, [dispatch]);
+
+  // Transform Redux users to customer format
+  const transformedCustomers = reduxCustomers.map((user: any) => ({
+    id: user.id,
+    name: user.name || 'Unknown',
+    email: user.email || '',
+    phone: user.phone || '+1 (555) 000-0000',
+    company: user.company || 'N/A',
+    position: user.position || 'Employee',
+    avatar: user.avatar_url || user.avatar || user.name?.substring(0, 2).toUpperCase() || 'N/A',
+    tier: user.tier || 'basic',
+    status: user.status || 'active',
+    location: user.location || 'Not specified',
+    memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown',
+    lastActive: user.last_active || '2 hours ago',
+    totalTickets: user.total_tickets || 0,
+    resolvedTickets: user.resolved_tickets || 0,
+    satisfaction: user.satisfaction || 0,
+    openTickets: user.open_tickets || 0,
+    urgentTickets: user.urgent_tickets || 0,
+    tags: user.tags || []
+  }));
+
+  // Use real data if available, otherwise fall back to mock data
+  const customers = transformedCustomers.length > 0 ? transformedCustomers : [
     {
       id: 'CUST-78945',
       name: 'Sarah Miller',
@@ -471,7 +506,15 @@ const CustomerListPage = () => {
           <p className="text-sm text-gray-600">
             Showing <span className="font-medium">{sortedCustomers.length}</span> of <span className="font-medium">{customers.length}</span> customers
           </p>
+          {isLoadingCustomers && <span className="text-sm text-purple-600">Loading customers...</span>}
         </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm">Error loading customers: {error}</p>
+          </div>
+        )}
 
         {/* Customers Grid/List */}
         {sortedCustomers.length > 0 ? (

@@ -1,5 +1,5 @@
 // src/features/auth/authSlice.ts
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { authAPI } from './authApi';
 import type { User, LoginCredentials, SignupData } from './authApi';
@@ -8,7 +8,8 @@ import type { RootState } from '../../store/index';
 export interface AuthState {
   user: User ;
   users: Record<string, User>; // Add this to cache users by ID
-  isLoading: boolean;
+  isLoading: boolean; // For auth operations (login, signup, logout, getCurrentUser)
+  isLoadingData: boolean; // For data operations (getAllCustomers, getUserById)
   error: string | null;
   initialized: boolean;
   isAuthenticated: boolean;
@@ -18,6 +19,7 @@ const initialState: AuthState = {
   user: {} as User,
   users: {}, // Initialize empty object for caching
   isLoading: false,
+  isLoadingData: false,
   error: null,
   initialized: false,
   isAuthenticated: false,
@@ -71,7 +73,14 @@ export const getCurrentUser = createAsyncThunk(
   'auth/getCurrentUser',
   async (_, { rejectWithValue }) => {
     try {
-      const user = await authAPI.getCurrentUser();
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('Authentication check timed out')), 10000)
+      );
+
+      const user = await Promise.race([
+        authAPI.getCurrentUser(),
+        timeoutPromise,
+      ]);
       return user;
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error));
@@ -121,10 +130,22 @@ export const updatePassword = createAsyncThunk(
 // Demo login helper
 export const demoLogin = createAsyncThunk(
   'auth/demoLogin',
-  async (role: 'user' | 'agent', { rejectWithValue }) => {
+  async (role: 'Customer' | 'agent', { rejectWithValue }) => {
     try {
       const response = await authAPI.demoLogin(role);
       return response.user;
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
+
+export const getAllCustomers = createAsyncThunk(
+  'auth/getAllCustomers',
+  async (_, { rejectWithValue }) => {
+    try {
+      const customers = await authAPI.getAllCustomers();
+      return customers;
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error));
     }
@@ -245,6 +266,23 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
     });
 
+    // Get All Customers
+    builder.addCase(getAllCustomers.pending, (state) => {
+      state.isLoadingData = true;
+      state.error = null;
+    });
+    builder.addCase(getAllCustomers.fulfilled, (state, action) => {
+      state.isLoadingData = false;
+      // Cache all customers by ID
+      action.payload.forEach((customer) => {
+        state.users[customer.id] = customer;
+      });
+    });
+    builder.addCase(getAllCustomers.rejected, (state, action) => {
+      state.isLoadingData = false;
+      state.error = action.payload as string;
+    });
+
     // Update Profile
     builder.addCase(updateProfile.pending, (state) => {
       state.isLoading = true;
@@ -313,6 +351,17 @@ export const { clearError, setUser, clearUsersCache } = authSlice.actions;
 // Selectors
 export const selectCurrentUser = (state: RootState) => state.auth.user;
 export const selectUserById = (state: RootState, userId: string) => state.auth.users[userId];
-export const selectAllUsers = (state: RootState) => Object.values(state.auth.users);
+
+// Memoized selector to prevent unnecessary rerenders
+export const selectAllUsers = createSelector(
+  (state: RootState) => state.auth.users,
+  (users) => Object.values(users)
+);
+
+// Selector for customers only (users with role 'Customer')
+export const selectAllCustomers = createSelector(
+  (state: RootState) => state.auth.users,
+  (users) => Object.values(users).filter(user => user.role === 'Customer')
+);
 
 export default authSlice.reducer;

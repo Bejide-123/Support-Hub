@@ -15,7 +15,6 @@ import NewTicketModal from '../components/NewTicketModal';
 import { fetchUserTickets, selectUserTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
 import { selectCurrentUser } from '../features/Auth/authSlice';
 
-// Status badge component (move this outside the main component)
 const StatusBadge = ({ status }: { status: string }) => {
   const styles = {
     'open': 'bg-blue-100 text-blue-700',
@@ -39,7 +38,7 @@ const UserDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const dispatch = useAppDispatch();
 
-  // Get user from Redux state
+  // Get user from Redux store and fetch their tickets and stats
   const user = useAppSelector(selectCurrentUser);
   const tickets = useAppSelector((state) => selectUserTickets(state, user?.id));
   const isLoading = useAppSelector(selectTicketsLoading);

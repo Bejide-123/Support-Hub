@@ -90,7 +90,7 @@ const LoginPage = () => {
     }
   };
 
-  const handleDemoLogin = async (role: 'user' | 'agent') => {
+  const handleDemoLogin = async (role: 'Customer' | 'agent') => {
     try {
       const resultAction = await dispatch(demoLogin(role)).unwrap();
       
