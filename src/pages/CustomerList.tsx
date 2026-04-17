@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Users,
   Search,
@@ -23,27 +23,8 @@ import AgentNavbar from '../components/AgentNavbar';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { getAllCustomers, selectAllCustomers } from '../features/Auth/authSlice';
 
-const CustomerListPage = () => {
-  const navigate = useNavigate(); // Added for navigation
-  const dispatch = useAppDispatch();
-  
-  // Get customers from Redux
-  const reduxCustomers = useAppSelector(selectAllCustomers);
-  const isLoadingCustomers = useAppSelector(state => state.auth.isLoadingData);
-  const error = useAppSelector(state => state.auth.error);
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTier, setSelectedTier] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
-  const [viewMode, setViewMode] = useState('grid'); // grid or list
-
-  // Fetch customers on component mount
-  useEffect(() => {
-    dispatch(getAllCustomers());
-  }, [dispatch]);
-
-  interface RawUser {
+// Move interfaces outside component
+interface RawUser {
   id: string;
   name?: string | null;
   email?: string | null;
@@ -65,265 +46,124 @@ const CustomerListPage = () => {
   tags?: string[] | null;
 }
 
-  // Transform Redux users to customer format
-  const transformedCustomers = reduxCustomers.map((user: RawUser) => ({
-    id: user.id,
-    name: user.name || 'Unknown',
-    email: user.email || '',
-    phone: user.phone || '+1 (555) 000-0000',
-    company: user.company || 'N/A',
-    position: user.position || 'Employee',
-    avatar: user.avatar_url || user.avatar || user.name?.substring(0, 2).toUpperCase() || 'N/A',
-    tier: user.tier || 'basic',
-    status: user.status || 'active',
-    location: user.location || 'Not specified',
-    memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown',
-    lastActive: user.last_active || '2 hours ago',
-    totalTickets: user.total_tickets || 0,
-    resolvedTickets: user.resolved_tickets || 0,
-    satisfaction: user.satisfaction || 0,
-    openTickets: user.open_tickets || 0,
-    urgentTickets: user.urgent_tickets || 0,
-    tags: user.tags || []
-  }));
+interface TransformedCustomer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  position: string;
+  avatar: string;
+  tier: string;
+  status: string;
+  location: string;
+  memberSince: string;
+  lastActive: string;
+  totalTickets: number;
+  resolvedTickets: number;
+  satisfaction: number;
+  openTickets: number;
+  urgentTickets: number;
+  tags: string[];
+}
 
-  // Use real data if available, otherwise fall back to mock data
-  const customers = transformedCustomers.length > 0 ? transformedCustomers : [
-    {
-      id: 'CUST-78945',
-      name: 'Sarah Miller',
-      email: 'sarah.miller@email.com',
-      phone: '+1 (555) 123-4567',
-      company: 'Miller Designs',
-      position: 'Creative Director',
-      avatar: 'SM',
-      tier: 'premium',
-      status: 'active',
-      location: 'San Francisco, CA',
-      memberSince: 'Jan 15, 2024',
-      lastActive: '2 hours ago',
-      totalTickets: 23,
-      resolvedTickets: 19,
-      satisfaction: 98,
-      openTickets: 2,
-      urgentTickets: 1,
-      tags: ['design-agency', 'enterprise', 'priority-support']
-    },
-    {
-      id: 'CUST-78932',
-      name: 'John Smith',
-      email: 'john.smith@email.com',
-      phone: '+1 (555) 987-6543',
-      company: 'Smith & Co',
-      position: 'CEO',
-      avatar: 'JS',
-      tier: 'enterprise',
-      status: 'active',
-      location: 'New York, NY',
-      memberSince: 'Dec 03, 2023',
-      lastActive: '15 minutes ago',
-      totalTickets: 45,
-      resolvedTickets: 42,
-      satisfaction: 96,
-      openTickets: 3,
-      urgentTickets: 0,
-      tags: ['enterprise', 'ceo', 'priority']
-    },
-    {
-      id: 'CUST-78891',
-      name: 'Emily Davis',
-      email: 'emily.davis@email.com',
-      phone: '+1 (555) 456-7890',
-      company: 'Tech Solutions Inc',
-      position: 'CTO',
-      avatar: 'ED',
-      tier: 'premium',
-      status: 'active',
-      location: 'Austin, TX',
-      memberSince: 'Mar 22, 2024',
-      lastActive: '1 hour ago',
-      totalTickets: 12,
-      resolvedTickets: 11,
-      satisfaction: 100,
-      openTickets: 1,
-      urgentTickets: 0,
-      tags: ['tech', 'cto', 'new']
-    },
-    {
-      id: 'CUST-78845',
-      name: 'Alex Wong',
-      email: 'alex.wong@email.com',
-      phone: '+1 (555) 234-5678',
-      company: 'Creative Labs',
-      position: 'Product Manager',
-      avatar: 'AW',
-      tier: 'standard',
-      status: 'active',
-      location: 'Seattle, WA',
-      memberSince: 'Feb 10, 2024',
-      lastActive: '3 hours ago',
-      totalTickets: 8,
-      resolvedTickets: 7,
-      satisfaction: 95,
-      openTickets: 1,
-      urgentTickets: 0,
-      tags: ['design', 'product']
-    },
-    {
-      id: 'CUST-78812',
-      name: 'Lisa Patel',
-      email: 'lisa.patel@email.com',
-      phone: '+1 (555) 876-5432',
-      company: 'HealthPlus',
-      position: 'Operations Director',
-      avatar: 'LP',
-      tier: 'enterprise',
-      status: 'active',
-      location: 'Chicago, IL',
-      memberSince: 'Nov 18, 2023',
-      lastActive: '5 hours ago',
-      totalTickets: 34,
-      resolvedTickets: 32,
-      satisfaction: 97,
-      openTickets: 2,
-      urgentTickets: 1,
-      tags: ['healthcare', 'enterprise']
-    },
-    {
-      id: 'CUST-78789',
-      name: 'James Wilson',
-      email: 'james.wilson@email.com',
-      phone: '+1 (555) 345-6789',
-      company: 'Wilson Consulting',
-      position: 'Independent Consultant',
-      avatar: 'JW',
-      tier: 'basic',
-      status: 'inactive',
-      location: 'Denver, CO',
-      memberSince: 'Apr 05, 2024',
-      lastActive: '2 days ago',
-      totalTickets: 3,
-      resolvedTickets: 2,
-      satisfaction: 89,
-      openTickets: 1,
-      urgentTickets: 0,
-      tags: ['consulting']
-    },
-    {
-      id: 'CUST-78756',
-      name: 'Maria Garcia',
-      email: 'maria.garcia@email.com',
-      phone: '+1 (555) 567-8901',
-      company: 'Garcia Enterprises',
-      position: 'Owner',
-      avatar: 'MG',
-      tier: 'premium',
-      status: 'active',
-      location: 'Miami, FL',
-      memberSince: 'Jan 30, 2024',
-      lastActive: '45 minutes ago',
-      totalTickets: 18,
-      resolvedTickets: 16,
-      satisfaction: 94,
-      openTickets: 2,
-      urgentTickets: 1,
-      tags: ['small-business', 'owner']
-    },
-    {
-      id: 'CUST-78723',
-      name: 'David Kim',
-      email: 'david.kim@email.com',
-      phone: '+1 (555) 678-9012',
-      company: 'Kim Development',
-      position: 'Lead Developer',
-      avatar: 'DK',
-      tier: 'standard',
-      status: 'active',
-      location: 'Portland, OR',
-      memberSince: 'Mar 12, 2024',
-      lastActive: '1 day ago',
-      totalTickets: 9,
-      resolvedTickets: 8,
-      satisfaction: 92,
-      openTickets: 1,
-      urgentTickets: 0,
-      tags: ['developer', 'tech']
-    },
-    {
-      id: 'CUST-78698',
-      name: 'Rachel Chen',
-      email: 'rachel.chen@email.com',
-      phone: '+1 (555) 789-0123',
-      company: 'Chen Analytics',
-      position: 'Data Scientist',
-      avatar: 'RC',
-      tier: 'premium',
-      status: 'active',
-      location: 'Boston, MA',
-      memberSince: 'Feb 25, 2024',
-      lastActive: '4 hours ago',
-      totalTickets: 15,
-      resolvedTickets: 14,
-      satisfaction: 99,
-      openTickets: 1,
-      urgentTickets: 0,
-      tags: ['analytics', 'data']
-    }
-  ];
+// Move helper components outside
+const TierBadge = ({ tier }: { tier: string }) => {
+  const styles = {
+    'enterprise': 'bg-purple-100 text-purple-700 border-purple-200',
+    'premium': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    'standard': 'bg-blue-100 text-blue-700 border-blue-200',
+    'basic': 'bg-gray-100 text-gray-700 border-gray-200',
+  };
+  
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${styles[tier as keyof typeof styles] || styles.basic}`}>
+      {tier.charAt(0).toUpperCase() + tier.slice(1)}
+    </span>
+  );
+};
 
-  // Stats
+const StatusBadge = ({ status }: { status: string }) => {
+  return status === 'active' ? (
+    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+      Active
+    </span>
+  ) : (
+    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+      Inactive
+    </span>
+  );
+};
+
+const CustomerListPage = () => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  
+  // Get customers from Redux
+  const reduxCustomers = useAppSelector(selectAllCustomers);
+  const isLoadingCustomers = useAppSelector(state => state.auth.isLoadingData);
+  const error = useAppSelector(state => state.auth.error);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTier, setSelectedTier] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+  const [viewMode, setViewMode] = useState('grid');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Fetch customers on component mount
+  useEffect(() => {
+    dispatch(getAllCustomers()).finally(() => {
+      setIsInitialLoad(false);
+    });
+  }, [dispatch]);
+
+  // Transform Redux users to customer format - only when data is available
+  const transformCustomers = (users: RawUser[]): TransformedCustomer[] => {
+    return users.map((user: RawUser) => ({
+      id: user.id,
+      name: user.name || 'Unknown',
+      email: user.email || '',
+      phone: user.phone || '+1 (555) 000-0000',
+      company: user.company || 'N/A',
+      position: user.position || 'Employee',
+      avatar: user.avatar_url || user.avatar || user.name?.substring(0, 2).toUpperCase() || 'N/A',
+      tier: user.tier || 'basic',
+      status: user.status || 'active',
+      location: user.location || 'Not specified',
+      memberSince: user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown',
+      lastActive: user.last_active || '2 hours ago',
+      totalTickets: user.total_tickets || 0,
+      resolvedTickets: user.resolved_tickets || 0,
+      satisfaction: user.satisfaction || 0,
+      openTickets: user.open_tickets || 0,
+      urgentTickets: user.urgent_tickets || 0,
+      tags: user.tags || []
+    }));
+  };
+
+  const customers = transformCustomers(reduxCustomers);
+
+  // Stats - only calculate when customers are loaded
   const stats = {
     total: customers.length,
     active: customers.filter(c => c.status === 'active').length,
     premium: customers.filter(c => c.tier === 'premium' || c.tier === 'enterprise').length,
     newThisMonth: customers.filter(c => {
       const month = c.memberSince.split(' ')[0];
-      return month === 'Jan' || month === 'Feb' || month === 'Mar' || month === 'Apr';
+      return ['Jan', 'Feb', 'Mar', 'Apr'].includes(month);
     }).length
-  };
-
-  // Customer tier badge
-  const TierBadge = ({ tier }: { tier: string }) => {
-    const styles = {
-      'enterprise': 'bg-purple-100 text-purple-700 border-purple-200',
-      'premium': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      'standard': 'bg-blue-100 text-blue-700 border-blue-200',
-      'basic': 'bg-gray-100 text-gray-700 border-gray-200',
-    };
-    
-    return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${styles[tier as keyof typeof styles] || styles.basic}`}>
-        {tier.charAt(0).toUpperCase() + tier.slice(1)}
-      </span>
-    );
-  };
-
-  // Status badge
-  const StatusBadge = ({ status }: { status: string }) => {
-    return status === 'active' ? (
-      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
-        Active
-      </span>
-    ) : (
-      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-        Inactive
-      </span>
-    );
   };
 
   // Filter customers
   const filteredCustomers = customers.filter(customer => {
-    // Search filter
     const matchesSearch = searchQuery === '' || 
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.id.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Tier filter
     const matchesTier = selectedTier === 'all' || customer.tier === selectedTier;
-    
-    // Status filter
     const matchesStatus = selectedStatus === 'all' || customer.status === selectedStatus;
     
     return matchesSearch && matchesTier && matchesStatus;
@@ -344,6 +184,83 @@ const CustomerListPage = () => {
         return 0;
     }
   });
+
+  // Loading state - show skeleton loader
+  if (isInitialLoad || (isLoadingCustomers && customers.length === 0)) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AgentNavbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header skeleton */}
+          <div className="mb-8">
+            <div className="h-10 w-48 bg-gray-200 rounded-lg animate-pulse mb-2"></div>
+            <div className="h-5 w-80 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+          
+          {/* Stats skeleton */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-white rounded-xl p-5 border border-gray-200">
+                <div className="h-8 w-8 bg-gray-200 rounded-lg animate-pulse mb-2"></div>
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-1"></div>
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Filters skeleton */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+            <div className="h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+          
+          {/* Grid skeleton */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-14 h-14 bg-gray-200 rounded-full animate-pulse mr-4"></div>
+                    <div>
+                      <div className="h-5 w-32 bg-gray-200 rounded animate-pulse mb-1"></div>
+                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                  <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                </div>
+                <div className="space-y-3 mb-4">
+                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-8 w-full bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && customers.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AgentNavbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+            <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
+            <h3 className="text-lg font-medium text-red-900 mb-2">Error Loading Customers</h3>
+            <p className="text-red-700 mb-6">{error}</p>
+            <button 
+              onClick={() => dispatch(getAllCustomers())}
+              className="px-6 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -383,6 +300,7 @@ const CustomerListPage = () => {
                 setSelectedTier('all');
                 setSelectedStatus('all');
                 setSortBy('newest');
+                dispatch(getAllCustomers());
               }}
               className="p-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
@@ -398,9 +316,6 @@ const CustomerListPage = () => {
               <div className="p-2.5 bg-purple-100 rounded-lg">
                 <Users size={20} className="text-purple-600" />
               </div>
-              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                +12% this month
-              </span>
             </div>
             <p className="text-2xl font-bold text-gray-900 mb-1">{stats.total}</p>
             <p className="text-sm text-gray-500">Total Customers</p>
@@ -454,47 +369,40 @@ const CustomerListPage = () => {
             </div>
 
             {/* Tier Filter */}
-            <div className="flex items-center space-x-2">
-              <Filter size={18} className="text-gray-400" />
-              <select
-                value={selectedTier}
-                onChange={(e) => setSelectedTier(e.target.value)}
-                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none bg-white"
-              >
-                <option value="all">All Tiers</option>
-                <option value="enterprise">Enterprise</option>
-                <option value="premium">Premium</option>
-                <option value="standard">Standard</option>
-                <option value="basic">Basic</option>
-              </select>
-            </div>
+            <select
+              value={selectedTier}
+              onChange={(e) => setSelectedTier(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none bg-white"
+            >
+              <option value="all">All Tiers</option>
+              <option value="enterprise">Enterprise</option>
+              <option value="premium">Premium</option>
+              <option value="standard">Standard</option>
+              <option value="basic">Basic</option>
+            </select>
 
             {/* Status Filter */}
-            <div className="flex items-center space-x-2">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none bg-white"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none bg-white"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
 
             {/* Sort */}
-            <div className="flex items-center space-x-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none bg-white"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="tickets">Most Tickets</option>
-                <option value="satisfaction">Highest Satisfaction</option>
-              </select>
-            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none bg-white"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="tickets">Most Tickets</option>
+              <option value="satisfaction">Highest Satisfaction</option>
+            </select>
 
             {/* View Mode Toggle */}
             <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
@@ -528,15 +436,10 @@ const CustomerListPage = () => {
           <p className="text-sm text-gray-600">
             Showing <span className="font-medium">{sortedCustomers.length}</span> of <span className="font-medium">{customers.length}</span> customers
           </p>
-          {isLoadingCustomers && <span className="text-sm text-purple-600">Loading customers...</span>}
+          {isLoadingCustomers && customers.length > 0 && (
+            <span className="text-sm text-purple-600">Refreshing customers...</span>
+          )}
         </div>
-
-        {/* Error message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-700 text-sm">Error loading customers: {error}</p>
-          </div>
-        )}
 
         {/* Customers Grid/List */}
         {sortedCustomers.length > 0 ? (
@@ -643,7 +546,7 @@ const CustomerListPage = () => {
                       <tr 
                         key={customer.id} 
                         className="hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/agent/customers/${customer.id}`, { state: { customer } })} // Pass the entire customer object
+                        onClick={() => navigate(`/agent/customers/${customer.id}`, { state: { customer } })}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center">
@@ -722,44 +625,6 @@ const CustomerListPage = () => {
               <UserPlus size={18} className="mr-2" />
               Add Your First Customer
             </button>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {sortedCustomers.length > 0 && (
-          <div className="mt-8 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Showing <span className="font-medium">1</span> to <span className="font-medium">{sortedCustomers.length}</span> of <span className="font-medium">{sortedCustomers.length}</span> customers
-            </p>
-            <div className="flex items-center space-x-2">
-              <button 
-                onClick={() => console.log('Previous page')}
-                className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
-                1
-              </button>
-              <button 
-                onClick={() => console.log('Page 2')}
-                className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50"
-              >
-                2
-              </button>
-              <button 
-                onClick={() => console.log('Page 3')}
-                className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50"
-              >
-                3
-              </button>
-              <button 
-                onClick={() => console.log('Next page')}
-                className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50"
-              >
-                Next
-              </button>
-            </div>
           </div>
         )}
       </main>
