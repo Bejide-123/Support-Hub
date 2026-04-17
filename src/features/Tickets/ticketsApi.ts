@@ -34,6 +34,9 @@ export interface UpdateTicketData {
   status?: 'open' | 'in-progress' | 'resolved' | 'closed';
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   assigned_to?: string | null;
+  snoozed_until?: string;
+  subject?: string;      
+  category?: string;     
 }
 
 export interface TicketMessage {

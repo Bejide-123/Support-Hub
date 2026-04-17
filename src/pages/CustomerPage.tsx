@@ -1,6 +1,6 @@
 // pages/CustomerProfilePage.tsx
-import { useState } from 'react';
-import {  Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -17,7 +17,6 @@ import {
   Edit,
   Save,
   X,
-  Plus,
   FileText,
   Download,
   Filter,
@@ -30,48 +29,75 @@ import {
   Settings,
 } from 'lucide-react';
 import AgentNavbar from '../components/AgentNavbar';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { selectCustomerById, getCustomerById } from "../features/Auth/authSlice";
+
+const StatusBadge = ({ status }: { status?: string }) => {
+  const styles = {
+    'open': 'bg-blue-100 text-blue-700',
+    'in-progress': 'bg-yellow-100 text-yellow-700',
+    'resolved': 'bg-green-100 text-green-700',
+    'closed': 'bg-gray-100 text-gray-700',
+    'active': 'bg-green-100 text-green-700',
+    'inactive': 'bg-gray-100 text-gray-700',
+    'suspended': 'bg-red-100 text-red-700',
+  };
+  
+  const statusKey = status?.toLowerCase() || '';
+  const style = styles[statusKey as keyof typeof styles] || 'bg-gray-100 text-gray-700';
+  
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${style}`}>
+      {status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown'}
+    </span>
+  );
+};
+
+// ✅ SatisfactionBadge component - MOVED OUTSIDE
+const SatisfactionBadge = ({ rating }: { rating?: string }) => {
+  const styles = {
+    'positive': 'bg-green-100 text-green-700',
+    'neutral': 'bg-yellow-100 text-yellow-700',
+    'negative': 'bg-red-100 text-red-700',
+  };
+  
+  const style = styles[rating as keyof typeof styles] || 'bg-gray-100 text-gray-700';
+  
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${style}`}>
+      {rating === 'positive' && <ThumbsUp size={12} className="inline mr-1" />}
+      {rating === 'neutral' && <span>•</span>}
+      {rating === 'negative' && <ThumbsDown size={12} className="inline mr-1" />}
+      {rating ? rating.charAt(0).toUpperCase() + rating.slice(1) : 'Unknown'}
+    </span>
+  );
+};
 
 const CustomerProfilePage = () => {
+  const dispatch = useAppDispatch();
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
+  
+
+  const customer = useAppSelector((state) => selectCustomerById(state, id || ''));
+
   const [editForm, setEditForm] = useState({
-    name: 'Sarah Miller',
-    email: 'sarah.miller@email.com',
-    phone: '+1 (555) 123-4567',
-    company: 'Miller Designs',
-    position: 'Creative Director',
-    location: 'San Francisco, CA',
-    timezone: 'PST (UTC-8)',
-    language: 'English'
+    name: customer?.name || '',           
+    email: customer?.email || '',         
+    phone: customer?.phone || '',         
+    company: customer?.company || '',     
+    position: customer?.position || '',   
+    location: customer?.location || '',  
+    timezone: customer?.timezone || 'PST (UTC-8)',
+    language: customer?.language || 'English'
   });
 
-  // Mock customer data
-  const customer = {
-    id: 'CUST-78945',
-    name: 'Sarah Miller',
-    email: 'sarah.miller@email.com',
-    phone: '+1 (555) 123-4567',
-    company: 'Miller Designs',
-    position: 'Creative Director',
-    avatar: 'SM',
-    location: 'San Francisco, CA',
-    timezone: 'PST (UTC-8)',
-    language: 'English',
-    memberSince: 'Jan 15, 2024',
-    lastActive: '2 hours ago',
-    totalTickets: 23,
-    resolvedTickets: 19,
-    satisfaction: 98,
-    lifetimeValue: '$1,240',
-    plan: 'Pro Annual',
-    status: 'active',
-    tags: ['design-agency', 'enterprise', 'priority-support'],
-    social: {
-      twitter: '@sarahmiller',
-      linkedin: 'sarahmiller'
+  useEffect(() => {
+    if (id) {
+      dispatch(getCustomerById(id));
     }
-  };
+  }, [dispatch, id]);
 
   // Mock ticket history
   const tickets = [
@@ -98,43 +124,6 @@ const CustomerProfilePage = () => {
   ]);
 
   const [newNote, setNewNote] = useState('');
-
-  // Status badge component
-  const StatusBadge = ({ status }: { status: string }) => {
-    const styles = {
-      'open': 'bg-blue-100 text-blue-700',
-      'in-progress': 'bg-yellow-100 text-yellow-700',
-      'resolved': 'bg-green-100 text-green-700',
-      'closed': 'bg-gray-100 text-gray-700',
-      'active': 'bg-green-100 text-green-700',
-      'inactive': 'bg-gray-100 text-gray-700',
-      'suspended': 'bg-red-100 text-red-700',
-    };
-    
-    return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles]}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  // Satisfaction badge
-  const SatisfactionBadge = ({ rating }: { rating: string }) => {
-    const styles = {
-      'positive': 'bg-green-100 text-green-700',
-      'neutral': 'bg-yellow-100 text-yellow-700',
-      'negative': 'bg-red-100 text-red-700',
-    };
-    
-    return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[rating as keyof typeof styles]}`}>
-        {rating === 'positive' && <ThumbsUp size={12} className="inline mr-1" />}
-        {rating === 'neutral' && <span>•</span>}
-        {rating === 'negative' && <ThumbsDown size={12} className="inline mr-1" />}
-        {rating.charAt(0).toUpperCase() + rating.slice(1)}
-      </span>
-    );
-  };
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,7 +175,7 @@ const CustomerProfilePage = () => {
             {/* Customer Info */}
             <div className="flex items-center">
               <div className="w-20 h-20 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold text-2xl mr-6">
-                {customer.avatar}
+                {customer?.avatar || customer?.name?.substring(0, 2).toUpperCase() || 'N/A'}
               </div>
               
               <div>
@@ -200,34 +189,31 @@ const CustomerProfilePage = () => {
                     />
                   ) : (
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                      {customer.name}
+                      {customer?.name}
                     </h1>
                   )}
-                  <StatusBadge status={customer.status} />
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                    {customer.plan}
-                  </span>
+                  <StatusBadge status={customer?.status} />
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-4 text-sm">
-                  <span className="text-gray-600">{customer.position}</span>
+                  <span className="text-gray-600">{customer?.position}</span>
                   <span className="text-gray-400">•</span>
-                  <span className="text-gray-600">{customer.company}</span>
+                  <span className="text-gray-600">{customer?.company}</span>
                   <span className="text-gray-400">•</span>
-                  <span className="text-gray-600">Customer since {customer.memberSince}</span>
+                  <span className="text-gray-600">Customer since {customer?.created_at}</span>
                 </div>
                 
                 <div className="flex items-center gap-4 mt-3">
                   <div className="flex items-center text-sm text-gray-600">
                     <Mail size={14} className="mr-1" />
-                    <a href={`mailto:${customer.email}`} className="hover:text-purple-600">
-                      {customer.email}
+                    <a href={`mailto:${customer?.email}`} className="hover:text-purple-600">
+                      {customer?.email}
                     </a>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Phone size={14} className="mr-1" />
-                    <a href={`tel:${customer.phone}`} className="hover:text-purple-600">
-                      {customer.phone}
+                    <a href={`tel:${customer?.phone}`} className="hover:text-purple-600">
+                      {customer?.phone}
                     </a>
                   </div>
                 </div>
@@ -267,45 +253,32 @@ const CustomerProfilePage = () => {
               </button>
             </div>
           </div>
-
-          {/* Tags */}
-          <div className="flex flex-wrap items-center gap-2 mt-6 pt-6 border-t border-gray-100">
-            {customer.tags.map((tag, i) => (
-              <span key={i} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs">
-                {tag}
-              </span>
-            ))}
-            <button className="px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-purple-300 hover:text-purple-600 transition-colors flex items-center">
-              <Plus size={12} className="mr-1" />
-              Add Tag
-            </button>
-          </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-sm text-gray-500 mb-1">Total Tickets</p>
-            <p className="text-2xl font-bold text-gray-900">{customer.totalTickets}</p>
+            <p className="text-2xl font-bold text-gray-900">{customer?.total_tickets || 0}</p>
           </div>
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-sm text-gray-500 mb-1">Resolved</p>
-            <p className="text-2xl font-bold text-green-600">{customer.resolvedTickets}</p>
+            <p className="text-2xl font-bold text-green-600">{customer?.resolved_tickets || 0}</p>
           </div>
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-sm text-gray-500 mb-1">Satisfaction</p>
             <div className="flex items-center">
-              <p className="text-2xl font-bold text-yellow-600">{customer.satisfaction}%</p>
+              <p className="text-2xl font-bold text-yellow-600">{customer?.satisfaction || 0}%</p>
               <Star size={16} className="ml-2 text-yellow-400 fill-current" />
             </div>
           </div>
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-sm text-gray-500 mb-1">LTV</p>
-            <p className="text-2xl font-bold text-purple-600">{customer.lifetimeValue}</p>
+            <p className="text-2xl font-bold text-purple-600">$1,240</p>
           </div>
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-sm text-gray-500 mb-1">Last Active</p>
-            <p className="text-sm font-medium text-gray-900 mt-2">{customer.lastActive}</p>
+            <p className="text-sm font-medium text-gray-900 mt-2">{customer?.updated_at || 'N/A'}</p>
           </div>
         </div>
 
@@ -378,28 +351,28 @@ const CustomerProfilePage = () => {
                           <Building size={16} className="text-gray-400 mr-3" />
                           <div>
                             <p className="text-xs text-gray-500">Company</p>
-                            <p className="text-sm font-medium text-gray-900">{customer.company}</p>
+                            <p className="text-sm font-medium text-gray-900">{customer?.company || 'N/A'}</p>
                           </div>
                         </div>
                         <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                           <MapPin size={16} className="text-gray-400 mr-3" />
                           <div>
                             <p className="text-xs text-gray-500">Location</p>
-                            <p className="text-sm font-medium text-gray-900">{customer.location}</p>
+                            <p className="text-sm font-medium text-gray-900">{customer?.location || 'N/A'}</p>
                           </div>
                         </div>
                         <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                           <Clock size={16} className="text-gray-400 mr-3" />
                           <div>
                             <p className="text-xs text-gray-500">Timezone</p>
-                            <p className="text-sm font-medium text-gray-900">{customer.timezone}</p>
+                            <p className="text-sm font-medium text-gray-900">{customer?.timezone || 'PST (UTC-8)'}</p>
                           </div>
                         </div>
                         <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                           <MessageSquare size={16} className="text-gray-400 mr-3" />
                           <div>
                             <p className="text-xs text-gray-500">Language</p>
-                            <p className="text-sm font-medium text-gray-900">{customer.language}</p>
+                            <p className="text-sm font-medium text-gray-900">{customer?.language || 'English'}</p>
                           </div>
                         </div>
                       </div>
@@ -523,7 +496,7 @@ const CustomerProfilePage = () => {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm text-gray-600 mb-1">Subscription Plan</p>
-                            <p className="text-2xl font-bold text-gray-900 mb-2">{customer.plan}</p>
+                            <p className="text-2xl font-bold text-gray-900 mb-2">{customer?.tier || 'Basic'}</p>
                             <p className="text-sm text-gray-600">Next billing: April 15, 2024</p>
                           </div>
                           <div className="text-right">

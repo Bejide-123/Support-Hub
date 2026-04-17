@@ -42,14 +42,15 @@ import {
 } from '../features/Tickets/ticketsSlice';
 import { selectCurrentUser, getUserById, selectUserById } from '../features/Auth/authSlice';
 import toast from 'react-hot-toast';
+import React from 'react';
 
 /* ─── tiny helpers ─────────────────────────────────────────── */
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  open:        { label: 'Open',        color: 'text-sky-600 bg-sky-50 border-sky-200',       icon: <Circle size={11} className="fill-sky-500 text-sky-500" /> },
-  'in-progress':{ label: 'In Progress', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: <CircleDot size={11} className="text-amber-500" /> },
-  resolved:    { label: 'Resolved',    color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={11} className="text-emerald-500" /> },
-  closed:      { label: 'Closed',      color: 'text-gray-500 bg-gray-100 border-gray-200',   icon: <MinusCircle size={11} className="text-gray-400" /> },
+  open:        { label: 'Open',        color: 'text-sky-600 bg-sky-50 border-sky-200',       icon: React.createElement(Circle, { size: 11, className: "fill-sky-500 text-sky-500" }) },
+  'in-progress':{ label: 'In Progress', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: React.createElement(CircleDot, { size: 11, className: "text-amber-500" }) },
+  resolved:    { label: 'Resolved',    color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: React.createElement(CheckCircle2, { size: 11, className: "text-emerald-500" }) },
+  closed:      { label: 'Closed',      color: 'text-gray-500 bg-gray-100 border-gray-200',   icon: React.createElement(MinusCircle, { size: 11, className: "text-gray-400" }) },
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; dot: string }> = {
@@ -61,21 +62,18 @@ const PRIORITY_CONFIG: Record<string, { label: string; dot: string }> = {
 
 const StatusBadge = ({ status }: { status: string }) => {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.open;
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${cfg.color}`}>
-      {cfg.icon}
-      {cfg.label}
-    </span>
-  );
+  return React.createElement('span', {
+    className: `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${cfg.color}`
+  }, cfg.icon, cfg.label);
 };
 
 const PriorityBadge = ({ priority }: { priority: string }) => {
   const cfg = PRIORITY_CONFIG[priority] ?? PRIORITY_CONFIG.medium;
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-gray-200 bg-white text-gray-700">
-      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      {cfg.label}
-    </span>
+  return React.createElement('span', {
+    className: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-gray-200 bg-white text-gray-700"
+  }, 
+    React.createElement('span', { className: `w-1.5 h-1.5 rounded-full ${cfg.dot}` }),
+    cfg.label
   );
 };
 
@@ -100,6 +98,13 @@ const Avatar = ({ name, gradient }: { name: string; gradient: string }) => (
   </div>
 );
 
+// Define the Attachment type
+interface Attachment {
+  name: string;
+  size: string;
+  url: string;
+}
+
 /* ─── Main Component ─────────────────────────────────────────── */
 const TicketDetailPage = () => {
   const { id }         = useParams<{ id: string }>();
@@ -115,7 +120,7 @@ const TicketDetailPage = () => {
   const [showMoreMenu,         setShowMoreMenu]         = useState(false);
   const [attachments,          setAttachments]          = useState<File[]>([]);
   const [isSubmitting,         setIsSubmitting]         = useState(false);
-  const [replyTo,              setReplyTo]              = useState<{ id: number; author: string } | null>(null);
+  const [replyTo,              setReplyTo]              = useState<{ id: string; author: string } | null>(null);
 
   const ticket      = useAppSelector(selectCurrentTicket);
   const messages    = useAppSelector(selectTicketMessages);
@@ -131,13 +136,11 @@ const TicketDetailPage = () => {
     }
   }, [dispatch, ticket?.customer_id, customer]);
 
-
   useEffect(() => {
-      if (ticket?.assigned_to && !assignedAgent) {
-        dispatch(getUserById(ticket.assigned_to));
-      }
-    }, [dispatch, ticket?.assigned_to, assignedAgent]);
-  
+    if (ticket?.assigned_to && !assignedAgent) {
+      dispatch(getUserById(ticket.assigned_to));
+    }
+  }, [dispatch, ticket?.assigned_to, assignedAgent]);
 
   useEffect(() => {
     if (id) {
@@ -153,20 +156,47 @@ const TicketDetailPage = () => {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return;
-    const map: Record<string, string> = { 'Open': 'open', 'In Progress': 'in-progress', 'Resolved': 'resolved', 'Closed': 'closed' };
+    
+    const map: Record<string, 'open' | 'in-progress' | 'resolved' | 'closed'> = { 
+      'Open': 'open', 
+      'In Progress': 'in-progress', 
+      'Resolved': 'resolved', 
+      'Closed': 'closed' 
+    };
+    
+    const mappedStatus = map[newStatus];
+    
+    if (!mappedStatus) {
+      toast.error('Invalid status');
+      return;
+    }
+    
     try {
-      await dispatch(updateTicket({ ticketId: id, updates: { status: map[newStatus] } })).unwrap();
+      await dispatch(updateTicket({ ticketId: id, updates: { status: mappedStatus } })).unwrap();
       toast.success(`Status → ${newStatus}`);
-    } catch { toast.error('Failed to update status'); }
+    } catch { 
+      toast.error('Failed to update status'); 
+    }
     setShowStatusDropdown(false);
   };
 
   const handlePriorityChange = async (newPriority: string) => {
     if (!id) return;
+    
+    const validPriorities: ('low' | 'medium' | 'high' | 'urgent')[] = ['low', 'medium', 'high', 'urgent'];
+    const mappedPriority = newPriority.toLowerCase() as 'low' | 'medium' | 'high' | 'urgent';
+    
+    if (!validPriorities.includes(mappedPriority)) {
+      toast.error('Invalid priority');
+      return;
+    }
+    
     try {
-      await dispatch(updateTicket({ ticketId: id, updates: { priority: newPriority.toLowerCase() } })).unwrap();
+      await dispatch(updateTicket({ ticketId: id, updates: { priority: mappedPriority } })).unwrap();
       toast.success(`Priority → ${newPriority}`);
-    } catch { toast.error('Failed to update priority'); }
+    } catch { 
+      toast.error('Failed to update priority'); 
+    }
     setShowPriorityDropdown(false);
   };
 
@@ -200,7 +230,7 @@ const TicketDetailPage = () => {
     } catch { toast.error('Failed to close ticket'); }
   };
 
-  const handleReplyTo = (author: string, messageId: number) => {
+  const handleReplyTo = (author: string, messageId: string) => {
     setReplyTo({ id: messageId, author });
     setNewMessage(`@${author} `);
     textareaRef.current?.focus();
@@ -270,7 +300,7 @@ const TicketDetailPage = () => {
                   </div>
                   <h1 className="text-xl font-bold text-gray-900 leading-tight">{ticket.subject}</h1>
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <StatusBadge   status={ticket.status}     />
+                    <StatusBadge status={ticket.status} />
                     <PriorityBadge priority={ticket.priority} />
                     <span className="flex items-center gap-1 text-[11px] text-gray-400">
                       <Calendar size={11} /> {new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -378,7 +408,7 @@ const TicketDetailPage = () => {
               </div>
 
               {/* Messages feed */}
-              <div className="h-[480px] overflow-y-auto px-6 py-5 space-y-5" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
+              <div className="h-[480px] overflow-y-auto px-6 py-5 space-y-5">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
                     <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center">
@@ -390,6 +420,9 @@ const TicketDetailPage = () => {
                   messages.map((msg, index) => {
                     const isAgent = msg.author_id === currentUser?.id;
                     const isFirstInGroup = index === 0 || messages[index - 1]?.author_id !== msg.author_id;
+                    
+                    // Safe check for attachments
+                    const hasAttachments = msg.attachments && msg.attachments.length > 0;
 
                     return (
                       <div key={msg.id} className={`flex gap-3 ${isAgent ? 'flex-row-reverse' : ''}`}>
@@ -425,9 +458,10 @@ const TicketDetailPage = () => {
                               : 'bg-gray-100 text-gray-800 rounded-tl-sm'
                           }`}>
                             <p className="whitespace-pre-wrap">{msg.message}</p>
-                            {msg.attachments?.length > 0 && (
+                            {/* Fixed: Safe check for attachments */}
+                            {hasAttachments && (
                               <div className="flex flex-wrap gap-2 mt-2">
-                                {msg.attachments.map((att: any, i: number) => (
+                                {msg.attachments!.map((att: Attachment, i: number) => (
                                   <div key={i} className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg ${isAgent ? 'bg-white/20' : 'bg-white'}`}>
                                     <File size={11} /> {att.name}
                                   </div>
@@ -495,17 +529,19 @@ const TicketDetailPage = () => {
                     />
                     <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100">
                       <div className="flex items-center gap-0.5">
-                        {[
-                          { icon: <Paperclip size={15} />, action: () => fileInputRef.current?.click() },
-                          { icon: <ImageIcon   size={15} /> },
-                          { icon: <Mic         size={15} /> },
-                          { icon: <Smile       size={15} /> },
-                        ].map((btn, i) => (
-                          <button key={i} type="button" onClick={btn.action}
-                            className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
-                            {btn.icon}
-                          </button>
-                        ))}
+                        <button type="button" onClick={() => fileInputRef.current?.click()}
+                          className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                          <Paperclip size={15} />
+                        </button>
+                        <button type="button" className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                          <ImageIcon size={15} />
+                        </button>
+                        <button type="button" className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                          <Mic size={15} />
+                        </button>
+                        <button type="button" className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                          <Smile size={15} />
+                        </button>
                         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileAttach} />
                       </div>
                       <button
@@ -568,7 +604,6 @@ const TicketDetailPage = () => {
                     <p className="text-xs text-gray-400">{assignedAgent?.name ? 'Support Agent' : 'No agent assigned'}</p>
                   </div>
                 </div>
-                
               </div>
             </div>
 
@@ -576,16 +611,20 @@ const TicketDetailPage = () => {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">Details</p>
               <div className="space-y-3">
-                {[
-                  { label: 'Category',      value: ticket.category || 'General', capitalize: true },
-                  { label: 'Created',       value: new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
-                  { label: 'Last Updated',  value: formatDate(ticket.updated_at) },
-                ].map(({ label, value, capitalize }) => (
-                  <div key={label} className="flex justify-between items-start">
-                    <span className="text-xs text-gray-400">{label}</span>
-                    <span className={`text-xs font-semibold text-gray-700 text-right max-w-[55%] ${capitalize ? 'capitalize' : ''}`}>{value}</span>
-                  </div>
-                ))}
+                <div className="flex justify-between items-start">
+                  <span className="text-xs text-gray-400">Category</span>
+                  <span className="text-xs font-semibold text-gray-700 capitalize">{ticket.category || 'General'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs text-gray-400">Created</span>
+                  <span className="text-xs font-semibold text-gray-700">
+                    {new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs text-gray-400">Last Updated</span>
+                  <span className="text-xs font-semibold text-gray-700">{formatDate(ticket.updated_at)}</span>
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">SLA</span>
                   <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
@@ -599,17 +638,18 @@ const TicketDetailPage = () => {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">Suggested Articles</p>
               <div className="space-y-1">
-                {[
-                  'How to update payment method',
-                  'Understanding billing cycles',
-                  'Payment troubleshooting guide',
-                ].map((article) => (
-                  <a key={article} href="#"
-                    className="flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
-                    <File size={12} className="text-gray-300 group-hover:text-emerald-500 mt-0.5 flex-shrink-0 transition-colors" />
-                    <span className="text-xs text-gray-600 group-hover:text-emerald-600 transition-colors leading-relaxed">{article}</span>
-                  </a>
-                ))}
+                <a href="#" className="flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+                  <File size={12} className="text-gray-300 group-hover:text-emerald-500 mt-0.5 flex-shrink-0 transition-colors" />
+                  <span className="text-xs text-gray-600 group-hover:text-emerald-600 transition-colors leading-relaxed">How to update payment method</span>
+                </a>
+                <a href="#" className="flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+                  <File size={12} className="text-gray-300 group-hover:text-emerald-500 mt-0.5 flex-shrink-0 transition-colors" />
+                  <span className="text-xs text-gray-600 group-hover:text-emerald-600 transition-colors leading-relaxed">Understanding billing cycles</span>
+                </a>
+                <a href="#" className="flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+                  <File size={12} className="text-gray-300 group-hover:text-emerald-500 mt-0.5 flex-shrink-0 transition-colors" />
+                  <span className="text-xs text-gray-600 group-hover:text-emerald-600 transition-colors leading-relaxed">Payment troubleshooting guide</span>
+                </a>
               </div>
             </div>
 

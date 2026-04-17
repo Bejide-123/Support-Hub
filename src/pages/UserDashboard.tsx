@@ -40,7 +40,9 @@ const UserDashboard = () => {
 
   // Get user from Redux store and fetch their tickets and stats
   const user = useAppSelector(selectCurrentUser);
-  const tickets = useAppSelector((state) => selectUserTickets(state, user?.id));
+  const tickets = useAppSelector((state) => 
+    user?.id ? selectUserTickets(state, user.id) : []
+  );
   const isLoading = useAppSelector(selectTicketsLoading);
   const ticketStats = useAppSelector(selectTicketStats);
 

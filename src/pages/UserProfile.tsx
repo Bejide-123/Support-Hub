@@ -107,7 +107,7 @@ const UserProfilePage = () => {
     
     try {
       // Dispatch update to Redux
-      const result = await dispatch(updateProfile({
+      await dispatch(updateProfile({
         name: profile.name,
         email: profile.email,
         phone: profile.phone,

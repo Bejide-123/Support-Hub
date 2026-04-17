@@ -43,8 +43,30 @@ const CustomerListPage = () => {
     dispatch(getAllCustomers());
   }, [dispatch]);
 
+  interface RawUser {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  position?: string | null;
+  avatar_url?: string | null;
+  avatar?: string | null;
+  tier?: string | null;
+  status?: string | null;
+  location?: string | null;
+  created_at?: string | null;
+  last_active?: string | null;
+  total_tickets?: number | null;
+  resolved_tickets?: number | null;
+  satisfaction?: number | null;
+  open_tickets?: number | null;
+  urgent_tickets?: number | null;
+  tags?: string[] | null;
+}
+
   // Transform Redux users to customer format
-  const transformedCustomers = reduxCustomers.map((user: any) => ({
+  const transformedCustomers = reduxCustomers.map((user: RawUser) => ({
     id: user.id,
     name: user.name || 'Unknown',
     email: user.email || '',
@@ -525,6 +547,7 @@ const CustomerListPage = () => {
                 <Link
                   key={customer.id}
                   to={`/agent/customers/${customer.id}`}
+                  state={{ customer }}
                   className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:border-purple-200 transition-all duration-300"
                 >
                   <div className="flex items-start justify-between mb-4">
@@ -620,7 +643,7 @@ const CustomerListPage = () => {
                       <tr 
                         key={customer.id} 
                         className="hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/agent/customers/${customer.id}`)}
+                        onClick={() => navigate(`/agent/customers/${customer.id}`, { state: { customer } })} // Pass the entire customer object
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center">

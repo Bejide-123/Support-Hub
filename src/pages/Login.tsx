@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { login, demoLogin, clearError } from '../features/Auth/authSlice';
+import { login, clearError } from '../features/Auth/authSlice';
 import { 
   Mail, 
   Lock, 
@@ -90,26 +90,26 @@ const LoginPage = () => {
     }
   };
 
-  const handleDemoLogin = async (role: 'Customer' | 'agent') => {
-    try {
-      const resultAction = await dispatch(demoLogin(role)).unwrap();
+  // const handleDemoLogin = async (role: 'Customer' | 'agent') => {
+  //   try {
+  //     const resultAction = await dispatch(demoLogin(role)).unwrap();
       
-      // Reset the redirect flag before navigating
-      redirectAttempted.current = false;
+  //     // Reset the redirect flag before navigating
+  //     redirectAttempted.current = false;
       
-      // The user object is in resultAction
-      if (resultAction && resultAction.role) {
-        const userRole = resultAction.role.toString().toLowerCase();
-        if (userRole.includes('agent')) {
-          navigate('/agent/dashboard', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
-      }
-    } catch (err) {
-      console.error('Demo login failed:', err);
-    }
-  };
+  //     // The user object is in resultAction
+  //     if (resultAction && resultAction.role) {
+  //       const userRole = resultAction.role.toString().toLowerCase();
+  //       if (userRole.includes('agent')) {
+  //         navigate('/agent/dashboard', { replace: true });
+  //       } else {
+  //         navigate('/dashboard', { replace: true });
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error('Demo login failed:', err);
+  //   }
+  // };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -267,7 +267,7 @@ const LoginPage = () => {
           </form>
 
           {/* Demo Accounts */}
-          <div className="mt-8">
+          {/* <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
@@ -299,7 +299,7 @@ const LoginPage = () => {
             <p className="text-xs text-gray-500 text-center mt-3">
               Use demo accounts to explore the platform
             </p>
-          </div>
+          </div> */}
 
           {/* Social Login */}
           <div className="mt-8">

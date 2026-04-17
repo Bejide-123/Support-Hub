@@ -6,8 +6,8 @@ import type { User, LoginCredentials, SignupData } from './authApi';
 import type { RootState } from '../../store/index';
 
 export interface AuthState {
-  user: User ;
-  users: Record<string, User>; // Add this to cache users by ID
+  user: User | null;
+  users: Record<string, User | null>; // Add this to cache users by ID
   isLoading: boolean; // For auth operations (login, signup, logout, getCurrentUser)
   isLoadingData: boolean; // For data operations (getAllCustomers, getUserById)
   error: string | null;
@@ -152,6 +152,18 @@ export const getAllCustomers = createAsyncThunk(
   }
 );
 
+export const getCustomerById = createAsyncThunk(
+  'auth/getCustomerById',
+  async (customerId: string, { rejectWithValue }) => {
+    try {
+      const customer = await authAPI.getCustomerById(customerId);
+      return customer;
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
+
 // Fetch user by ID - stores in cache without overwriting current user
 export const getUserById = createAsyncThunk(
   'auth/getUserById',
@@ -234,7 +246,7 @@ const authSlice = createSlice({
       state.isLoading = true;
     });
     builder.addCase(logout.fulfilled, (state) => {
-      state.user = null;
+      state.user = null as unknown as User;
       state.users = {}; // Clear cache on logout
       state.isLoading = false;
       state.initialized = true;
@@ -261,7 +273,7 @@ const authSlice = createSlice({
     });
     builder.addCase(getCurrentUser.rejected, (state) => {
       state.isLoading = false;
-      state.user = null;
+      state.user = null as unknown as User;
       state.initialized = true;
       state.isAuthenticated = false;
     });
@@ -279,6 +291,22 @@ const authSlice = createSlice({
       });
     });
     builder.addCase(getAllCustomers.rejected, (state, action) => {
+      state.isLoadingData = false;
+      state.error = action.payload as string;
+    });
+    
+    // Get Customer By ID
+    builder.addCase(getCustomerById.pending, (state) => {
+      state.isLoadingData = true;
+      state.error = null;
+    });
+    builder.addCase(getCustomerById.fulfilled, (state, action) => {
+      state.isLoadingData = false;
+      if (action.payload) {
+        state.users[action.payload.id] = action.payload;
+      }
+    });
+    builder.addCase(getCustomerById.rejected, (state, action) => {
       state.isLoadingData = false;
       state.error = action.payload as string;
     });
@@ -320,7 +348,7 @@ const authSlice = createSlice({
     });
 
     // Get User By ID - stores in cache without overwriting current user
-    builder.addCase(getUserById.pending, (state) => {
+    builder.addCase(getUserById.pending, () => {
       // Don't set global loading for fetching other users
     });
     builder.addCase(getUserById.fulfilled, (state, action) => {
@@ -328,6 +356,7 @@ const authSlice = createSlice({
       state.users[userId] = user; // Store in cache
     });
     builder.addCase(getUserById.rejected, (state, action) => {
+      state.error = action.payload as string;
       console.error('Failed to fetch user:', action.payload);
     });
 
@@ -361,7 +390,17 @@ export const selectAllUsers = createSelector(
 // Selector for customers only (users with role 'Customer')
 export const selectAllCustomers = createSelector(
   (state: RootState) => state.auth.users,
-  (users) => Object.values(users).filter(user => user.role === 'Customer')
+  (users) => {
+    return Object.values(users).filter(
+      (user): user is User => user !== null && user.role === 'Customer'
+    );
+  }
+);
+
+export const selectCustomerById = createSelector(
+  (state: RootState) => state.auth.users,
+  (_: RootState, customerId: string) => customerId,
+  (users, customerId) => users[customerId] && users[customerId].role === 'Customer' ? users[customerId] : null
 );
 
 export default authSlice.reducer;

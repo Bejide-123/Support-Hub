@@ -22,7 +22,7 @@ import LoginPage from "./pages/Login";
 import SignupPage from "./pages/SignUp";
 import ForgotPasswordPage from "./pages/Forgot";
 import CustomerListPage from "./pages/CustomerList";
-import { Navigate } from "react-router-dom";
+import CustomerProfilePage from "./pages/CustomerPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import type { RootState } from "./store";
 import { useAppSelector, useAppDispatch } from "./store/hooks";
@@ -31,7 +31,7 @@ import { getCurrentUser } from "./features/Auth/authSlice";
 
 const App = () => {
   const dispatch = useAppDispatch();
-  const { isAuthenticated, initialized } = useAppSelector((state: RootState) => state.auth);
+  const {  initialized } = useAppSelector((state: RootState) => state.auth);
   useEffect(() => {
     dispatch(getCurrentUser());
   }, [dispatch]);
@@ -82,12 +82,12 @@ const App = () => {
             }
           />
           <Route path="/agent/customers" element={<CustomerListPage />} />
-          {/* <Route
+          <Route
             path="/agent/customers/:id"
             element={
                 <CustomerProfilePage />
             }
-          /> */}
+          />
           <Route path="/agent/analytics" element={<Analytics />} />
           <Route path="/agent/profile" element={<AgentProfilePage />} />
           <Route path="/agent/settings" element={<AgentSettings />} />

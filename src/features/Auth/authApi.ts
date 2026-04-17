@@ -127,6 +127,7 @@ export const authAPI = {
     return profile as User;
   },
 
+
   getAllCustomers: async() => {
     const { data, error } = await supabase
       .from('profiles')
@@ -137,6 +138,22 @@ export const authAPI = {
     if (error) throw error;
     return data as User[];
   },
+
+  getCustomerById: async (customerId: string): Promise<User | null> => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', customerId)
+      .eq('role', 'Customer')
+      .single();
+
+    if (error) {
+      console.error('Error fetching customer profile:', error);
+      return null;
+    }
+    return profile as User;
+  },
+  
   // Update profile
   updateProfile: async (userId: string, data: Partial<User>) => {
     const { data: profile, error } = await supabase

@@ -29,7 +29,9 @@ const TicketsPage = () => {
   const navigate = useNavigate();
 
   const user = useAppSelector(selectCurrentUser);
-  const tickets = useAppSelector((state) => selectUserTickets(state, user?.id));
+  const tickets = useAppSelector((state) => 
+  user?.id ? selectUserTickets(state, user.id) : []
+);
   const isLoading = useAppSelector(selectTicketsLoading);
   const ticketStats = useAppSelector(selectTicketStats);
 
@@ -105,10 +107,11 @@ const TicketsPage = () => {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       case 'updated':
         return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      case 'priority':
+      case 'priority': {
         const priorityOrder = { 'urgent': 1, 'high': 2, 'medium': 3, 'low': 4 };
         return (priorityOrder[a.priority as keyof typeof priorityOrder] || 5) - 
                (priorityOrder[b.priority as keyof typeof priorityOrder] || 5);
+      }
       default:
         return 0;
     }

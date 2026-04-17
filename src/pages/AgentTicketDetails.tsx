@@ -113,7 +113,7 @@ const AgentTicketDetailPage = () => {
   const [showNote, setShowNote]     = useState(false);
   const [files, setFiles]           = useState<File[]>([]);
   const [sending, setSending]       = useState(false);
-  const [replyTo, setReplyTo]       = useState<{id: number; author: string}|null>(null);
+  const [replyTo, setReplyTo]       = useState<{id: string; author: string}|null>(null);
   const [canned, setCanned]         = useState(false);
   const [editing, setEditing]       = useState(false);
   const [editForm, setEditForm]     = useState({ subject: '', description: '', category: '' });
@@ -154,18 +154,41 @@ const AgentTicketDetailPage = () => {
 
 
   /* handlers */
-  const changeStatus = async (s: string) => {
-    const map: Record<string,string> = { Open:'open','In Progress':'in-progress', Resolved:'resolved', Closed:'closed' };
-    try { await dispatch(updateTicket({ ticketId: id!, updates: { status: map[s] ?? s } })).unwrap(); toast.success(`Status → ${s}`); }
-    catch { toast.error('Failed'); }
-    setDd(null);
+ const changeStatus = async (s: string) => {
+  const map: Record<string, 'open' | 'in-progress' | 'resolved' | 'closed'> = { 
+    Open: 'open',
+    'In Progress': 'in-progress', 
+    Resolved: 'resolved', 
+    Closed: 'closed' 
   };
+  const mappedStatus = map[s] ?? s as 'open' | 'in-progress' | 'resolved' | 'closed';
+  try { 
+    await dispatch(updateTicket({ ticketId: id!, updates: { status: mappedStatus } })).unwrap(); 
+    toast.success(`Status → ${s}`); 
+  } catch { 
+    toast.error('Failed'); 
+  }
+  setDd(null);
+};
 
-  const changePriority = async (p: string) => {
-    try { await dispatch(updateTicket({ ticketId: id!, updates: { priority: p } })).unwrap(); toast.success(`Priority → ${p}`); }
-    catch { toast.error('Failed'); }
-    setDd(null);
-  };
+const changePriority = async (p: string) => {
+  const validPriorities: ('low' | 'medium' | 'high' | 'urgent')[] = ['low', 'medium', 'high', 'urgent'];
+  const mappedPriority = p as 'low' | 'medium' | 'high' | 'urgent';
+  
+  // Optional: Validate that p is a valid priority
+  if (!validPriorities.includes(mappedPriority)) {
+    toast.error('Invalid priority');
+    return;
+  }
+  
+  try { 
+    await dispatch(updateTicket({ ticketId: id!, updates: { priority: mappedPriority } })).unwrap(); 
+    toast.success(`Priority → ${p}`); 
+  } catch { 
+    toast.error('Failed'); 
+  }
+  setDd(null);
+};
 
   const assignToMe = async () => {
     try { await dispatch(updateTicket({ ticketId: id!, updates: { assigned_to: currentUser?.name } })).unwrap(); toast.success('Assigned to you'); }
@@ -583,7 +606,7 @@ const AgentTicketDetailPage = () => {
               {tab === 'activity' && (
                 <div className="p-5 space-y-2 max-h-[480px] overflow-y-auto" style={{scrollbarWidth:'thin'}}>
                   {[
-                    { action: 'Ticket created', user: ticket.customer_name, time: ticket.created_at, color: 'bg-sky-500' },
+                    { action: 'Ticket created', user: ticket.customer_id, time: ticket.created_at, color: 'bg-sky-500' },
                     { action: `Status set to ${ticket.status}`, user: 'System', time: ticket.updated_at, color: 'bg-gray-400' },
                     ...convMsgs.slice(0,5).map(m => ({ action: 'Message sent', user: m.author_name, time: m.created_at, color: 'bg-violet-500' })),
                   ].map((a, i) => (
@@ -710,8 +733,8 @@ const AgentTicketDetailPage = () => {
 
               <div className="space-y-2.5 border-t border-gray-100 pt-3.5">
                 {[
-                  { icon: <Mail size={12}/>,    val: ticket.customer_email || '—', href: `mailto:${ticket.customer_email}` },
-                  { icon: <Phone size={12}/>,   val: ticket.customer_phone || 'No phone provided' },
+                  { icon: <Mail size={12}/>,    val: customer?.email || '—', href: `mailto:${customer?.email}` },
+                  { icon: <Phone size={12}/>,   val: customer?.phone || 'No phone provided' },
                   { icon: <Ticket size={12}/>,  val: '3 total tickets' },
                 ].map((row,i) => (
                   <div key={i} className="flex items-center gap-2.5">
