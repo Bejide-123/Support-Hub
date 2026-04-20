@@ -12,6 +12,7 @@ export interface Ticket {
   assigned_to?: string | null;
   created_at: string;
   updated_at: string;
+  resolved_at?: string | null;
   tags?: string[];
   attachments?: {
     name: string;
