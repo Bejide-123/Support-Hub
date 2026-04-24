@@ -1,49 +1,79 @@
 import { useState, useEffect } from 'react';
 import {
-  Ticket,
-  Plus,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  ChevronRight,
-  MessageSquare,
-  FileText
+  Ticket, Plus, Clock,  ChevronRight,
+  MessageSquare, Zap,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import DashboardNavbar from '../components/DashboardNavbar';
 import NewTicketModal from '../components/NewTicketModal';
-import { fetchUserTickets, selectUserTickets, selectTicketsLoading, selectTicketStats, getUserTicketStats } from "../features/Tickets/ticketsSlice";
+import {
+  fetchUserTickets, selectUserTickets, selectTicketsLoading,
+  selectTicketStats, getUserTicketStats,
+} from '../features/Tickets/ticketsSlice';
 import { selectCurrentUser } from '../features/Auth/authSlice';
 
+/* ── design tokens ──────────────────────────────────────────── */
+const STATUS_CFG: Record<string, { cls: string; dot: string; label: string }> = {
+  open:          { cls: "text-sky-600 bg-sky-50 border-sky-200",             dot: "bg-sky-500",     label: "Open"        },
+  'in-progress': { cls: "text-amber-600 bg-amber-50 border-amber-200",       dot: "bg-amber-400",   label: "In Progress" },
+  resolved:      { cls: "text-emerald-600 bg-emerald-50 border-emerald-200", dot: "bg-emerald-500", label: "Resolved"    },
+  closed:        { cls: "text-gray-400 bg-gray-100 border-gray-200",         dot: "bg-gray-400",    label: "Closed"      },
+};
+
+const PRIORITY_CFG: Record<string, { bar: string; text: string; label: string }> = {
+  urgent: { bar: "bg-red-500",    text: "text-red-600",    label: "Urgent" },
+  high:   { bar: "bg-orange-400", text: "text-orange-500", label: "High"   },
+  medium: { bar: "bg-amber-400",  text: "text-amber-500",  label: "Medium" },
+  low:    { bar: "bg-emerald-400",text: "text-emerald-600",label: "Low"    },
+};
+
 const StatusBadge = ({ status }: { status: string }) => {
-  const styles = {
-    'open': 'bg-blue-100 text-blue-700',
-    'in-progress': 'bg-yellow-100 text-yellow-700',
-    'resolved': 'bg-green-100 text-green-700',
-    'closed': 'bg-gray-100 text-gray-700',
-    'urgent': 'bg-red-100 text-red-700',
-    'high': 'bg-orange-100 text-orange-700',
-    'medium': 'bg-yellow-100 text-yellow-700',
-    'low': 'bg-green-100 text-green-700',
-  };
-  
+  const cfg = STATUS_CFG[status];
+  if (!cfg) return null;
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-700'}`}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
     </span>
   );
 };
 
+const PriorityDot = ({ priority }: { priority: string }) => {
+  const cfg = PRIORITY_CFG[priority] ?? PRIORITY_CFG.medium;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${cfg.text}`}>
+      <span className={`w-2 h-2 rounded-full ${cfg.bar}`} />
+      {cfg.label}
+    </span>
+  );
+};
+
+function relTime(d: string) {
+  const diff = Date.now() - new Date(d).getTime();
+  const m = Math.floor(diff / 60000), h = Math.floor(diff / 3600000), day = Math.floor(diff / 86400000);
+  if (m < 1)   return 'Just now';
+  if (m < 60)  return `${m}m ago`;
+  if (h < 24)  return `${h}h ago`;
+  if (day ===1) return 'Yesterday';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+const FAQ = [
+  { question: 'How to reset my password?',   views: '1.2k views' },
+  { question: 'What payment methods are accepted?', views: '890 views' },
+  { question: 'How to update my profile?',   views: '756 views' },
+  { question: 'What are the ticket response times?', views: '645 views' },
+];
+
+/* ═══════════════════════════════════════════════════════════════ */
 const UserDashboard = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const dispatch = useAppDispatch();
 
-  // Get user from Redux store and fetch their tickets and stats
-  const user = useAppSelector(selectCurrentUser);
-  const tickets = useAppSelector((state) => 
-    user?.id ? selectUserTickets(state, user.id) : []
-  );
-  const isLoading = useAppSelector(selectTicketsLoading);
+  const user        = useAppSelector(selectCurrentUser);
+  const tickets     = useAppSelector(s => user?.id ? selectUserTickets(s, user.id) : []);
+  const isLoading   = useAppSelector(selectTicketsLoading);
   const ticketStats = useAppSelector(selectTicketStats);
 
   useEffect(() => {
@@ -53,191 +83,223 @@ const UserDashboard = () => {
     }
   }, [dispatch, user?.id]);
 
-  // Stats data
-  const stats = [
-    { label: 'Open Tickets', value: ticketStats?.open || 0, icon: <Ticket size={20} />, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { label: 'In Progress', value: ticketStats?.inProgress || 0, icon: <Clock size={20} />, color: 'text-yellow-600', bg: 'bg-yellow-100' },
-    { label: 'Resolved', value: ticketStats?.resolved || 0, icon: <CheckCircle size={20} />, color: 'text-green-600', bg: 'bg-green-100' },
-    { label: 'Total Tickets', value: ticketStats?.total || 0, icon: <FileText size={20} />, color: 'text-purple-600', bg: 'bg-purple-100' },
+  const METRICS = [
+    { label: "Open",        value: ticketStats?.open       || 0, accent: "bg-sky-500",     delta: null,   up: true  },
+    { label: "In Progress", value: ticketStats?.inProgress || 0, accent: "bg-amber-400",   delta: null,   up: true  },
+    { label: "Resolved",    value: ticketStats?.resolved   || 0, accent: "bg-emerald-500", delta: "+3",   up: true  },
+    { label: "Total",       value: ticketStats?.total      || 0, accent: "bg-indigo-500",  delta: null,   up: true  },
   ];
 
-  // FAQ items
-  const faqItems = [
-    { question: 'How to reset password?', views: '1.2k views' },
-    { question: 'Payment methods accepted?', views: '890 views' },
-    { question: 'How to update profile?', views: '756 views' },
-    { question: 'Ticket response times?', views: '645 views' },
-  ];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
+  /* ─────────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#f4f5f7]">
       <DashboardNavbar />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.name || 'User'}! 👋
-          </h1>
-          {user?.position && (
-            <p className="text-gray-600">
-              {user.position}
-            </p>
-          )}
-          {!user?.position && (
-            <p className="text-gray-600">
-              Here's an overview of your support tickets and recent activity.
-            </p>
-          )}
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+
+        {/* ── Hero banner ─────────────────────────────────────── */}
+        <div className="relative bg-gradient-to-br from-emerald-600 via-teal-600 to-teal-700 rounded-2xl mt-6 mb-6 px-8 py-7 overflow-hidden shadow-lg shadow-teal-200">
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/5" />
+          <div className="absolute top-4 right-20 w-24 h-24 rounded-full bg-white/5" />
+          <div className="absolute -bottom-6 right-40 w-32 h-32 rounded-full bg-white/5" />
+
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+            <div>
+              <p className="text-teal-300 text-sm font-semibold mb-1">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </p>
+              <h1 className="text-2xl font-extrabold text-white mb-1">
+                {greeting}, {user?.name?.split(' ')[0] || 'there'} 👋
+              </h1>
+              <p className="text-teal-200 text-sm">
+                {user?.position
+                  ? user.position
+                  : `You have ${ticketStats?.open || 0} open tickets · ${ticketStats?.inProgress || 0} in progress`}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white text-emerald-700 text-sm font-extrabold rounded-xl hover:bg-emerald-50 active:scale-95 transition-all shadow-sm flex-shrink-0">
+              <Plus size={16} /> New Ticket
+            </button>
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl ${stat.bg}`}>
-                  <span className={stat.color}>{stat.icon}</span>
-                </div>
-                <span className={`text-2xl font-bold ${stat.color}`}>{stat.value}</span>
-              </div>
-              <p className="text-gray-600 text-sm">{stat.label}</p>
+        {/* ── Metric cards ─────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {METRICS.map((m, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 group hover:shadow-md transition-shadow">
+              <div className={`h-1 rounded-full ${m.accent} mb-3 w-8 group-hover:w-full transition-all duration-500`} />
+              <p className="text-2xl font-extrabold text-gray-900 mb-0.5">{m.value}</p>
+              <p className="text-xs text-gray-400 font-semibold">{m.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Main Grid: Tickets + FAQ */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          
-          {/* Left Column: Tickets List */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Tickets Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                <Ticket size={22} className="mr-2 text-emerald-600" />
-                Recent Tickets
-              </h2>
-              
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-emerald-200 transition-all duration-300 whitespace-nowrap"
-              >
-                <Plus size={18} className="mr-2" />
-                New Ticket
-              </button>
+        {/* ── Main grid ───────────────────────────────────────── */}
+        <div className="grid lg:grid-cols-[1fr_300px] gap-5">
+
+          {/* LEFT — tickets */}
+          <div className="space-y-4">
+
+            {/* Section header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ticket size={16} className="text-emerald-600" />
+                <span className="font-extrabold text-gray-900 text-sm">Recent Tickets</span>
+                <span className="px-2 py-0.5 text-xs font-bold bg-gray-200 text-gray-600 rounded-full">{tickets.length}</span>
+              </div>
+              <Link to="/tickets" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1">
+                View all <ChevronRight size={13} />
+              </Link>
             </div>
 
-            {/* Tickets Table */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">Loading tickets...</td>
-                      </tr>
-                    ) : tickets.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">No tickets found.</td>
-                      </tr>
-                    ) : (
-                      tickets.map((ticket) => (
-                        <tr key={ticket.id} className="hover:bg-gray-50 transition-colors cursor-pointer">
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{ticket.ticket_number}</td>
-                          <td className="px-6 py-4 text-sm text-gray-700">{ticket.subject}</td>
-                          <td className="px-6 py-4">
-                            <StatusBadge status={ticket.status} />
-                          </td>
-                          <td className="px-6 py-4">
-                            <StatusBadge status={ticket.priority} />
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{new Date(ticket.updated_at).toLocaleString()}</td>
-                          <td className="px-6 py-4">
-                            <ChevronRight size={18} className="text-gray-400" />
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* View All Link */}
-              <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                <a href="/tickets" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center justify-end">
-                  View all tickets
-                  <ChevronRight size={16} className="ml-1" />
-                </a>
-              </div>
+            {/* Tickets card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+              {isLoading ? (
+                <div className="py-16 flex flex-col items-center gap-3">
+                  <div className="w-9 h-9 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+                  <p className="text-sm text-gray-400 font-medium">Loading tickets…</p>
+                </div>
+              ) : tickets.length === 0 ? (
+                <div className="py-16 flex flex-col items-center gap-4">
+                  <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center">
+                    <Ticket size={26} className="text-gray-300" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-base font-bold text-gray-700 mb-1">No tickets yet</p>
+                    <p className="text-sm text-gray-400">Create your first ticket to get started</p>
+                  </div>
+                  <button onClick={() => setModalOpen(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors">
+                    <Plus size={14} /> Create Ticket
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Table header */}
+                  <div className="border-b border-gray-100 bg-gray-50/60">
+                    <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center px-5 py-3.5 gap-4">
+                      {["ID","Subject","Status","Priority","Updated",""].map((h, i) => (
+                        <span key={i} className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-gray-50">
+                    {tickets.map(t => {
+                      const pcfg = PRIORITY_CFG[t.priority] ?? PRIORITY_CFG.medium;
+                      return (
+                        <Link key={t.id} to={`/tickets/${t.id}`}
+                          className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center px-5 py-3.5 gap-4 hover:bg-gray-50/80 transition-colors group cursor-pointer">
+
+                          {/* ID + priority bar */}
+                          <div className="flex items-center gap-2">
+                            <div className={`w-1 h-8 rounded-full flex-shrink-0 ${pcfg.bar}`} />
+                            <span className="text-xs font-mono font-bold text-gray-400 whitespace-nowrap">{t.ticket_number}</span>
+                          </div>
+
+                          {/* Subject */}
+                          <p className="text-sm font-bold text-gray-800 group-hover:text-emerald-600 transition-colors truncate">
+                            {t.subject}
+                          </p>
+
+                          {/* Status */}
+                          <StatusBadge status={t.status} />
+
+                          {/* Priority */}
+                          <PriorityDot priority={t.priority} />
+
+                          {/* Updated */}
+                          <span className="text-xs text-gray-400 font-medium flex items-center gap-1 whitespace-nowrap">
+                            <Clock size={11} className="text-gray-300" />
+                            {relTime(t.updated_at)}
+                          </span>
+
+                          {/* Arrow */}
+                          <ChevronRight size={14} className="text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Right Column: FAQ & Common Issues */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <MessageSquare size={20} className="mr-2 text-emerald-600" />
-                Common Issues
-              </h3>
-              
-              <div className="space-y-4">
-                {faqItems.map((item, index) => (
-                  <div key={index} className="group cursor-pointer">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 group-hover:text-emerald-600 transition-colors">
-                          {item.question}
-                        </h4>
-                        <p className="text-xs text-gray-500 mt-1">{item.views}</p>
-                      </div>
-                      <ChevronRight size={16} className="text-gray-400 group-hover:text-emerald-500" />
+          {/* RIGHT sidebar */}
+          <div className="space-y-4">
+
+            {/* Common issues */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <MessageSquare size={14} className="text-emerald-600" />
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Common Issues</p>
+              </div>
+
+              <div className="divide-y divide-gray-50">
+                {FAQ.map((item, i) => (
+                  <div key={i} className="flex items-start justify-between gap-3 py-3 group cursor-pointer">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-700 group-hover:text-emerald-600 transition-colors leading-snug">
+                        {item.question}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">{item.views}</p>
                     </div>
-                    {index < faqItems.length - 1 && (
-                      <hr className="mt-4 border-gray-100" />
-                    )}
+                    <ChevronRight size={13} className="text-gray-300 group-hover:text-emerald-500 flex-shrink-0 mt-0.5 transition-colors" />
                   </div>
                 ))}
               </div>
-              
-              <button className="mt-6 w-full text-center text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+
+              <button className="mt-3 w-full text-center text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors py-2 hover:bg-emerald-50 rounded-xl">
                 View all FAQs →
               </button>
             </div>
 
-            {/* Quick Tip Card */}
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-6">
-              <div className="flex items-start space-x-3">
-                <div className="p-2 bg-emerald-100 rounded-lg">
-                  <AlertCircle size={20} className="text-emerald-600" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-1">Quick Tip</h4>
-                  <p className="text-sm text-gray-600">
-                    For urgent issues, select "High" priority to get faster response times.
-                  </p>
-                </div>
+            {/* Quick tip */}
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-5 text-white shadow-sm shadow-teal-200">
+              <p className="text-xs font-bold text-teal-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <Zap size={11} /> Quick Tip
+              </p>
+              <p className="text-sm font-semibold leading-relaxed text-teal-50">
+                For urgent issues, select <span className="text-white font-extrabold">"High"</span> priority when creating a ticket to get faster response times.
+              </p>
+              <button
+                onClick={() => setModalOpen(true)}
+                className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl transition-colors">
+                <Plus size={13} /> Create Ticket
+              </button>
+            </div>
+
+            {/* Status legend */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Status Guide</p>
+              <div className="space-y-2.5">
+                {Object.entries(STATUS_CFG).map(([key, cfg]) => (
+                  <div key={key} className="flex items-center gap-2.5">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
+                    <span className="text-sm text-gray-600 font-medium">{cfg.label}</span>
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {key === 'open' && 'Awaiting agent'}
+                      {key === 'in-progress' && 'Being handled'}
+                      {key === 'resolved' && 'Issue fixed'}
+                      {key === 'closed' && 'Ticket closed'}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
+
           </div>
         </div>
       </main>
 
-      {/* New Ticket Modal */}
-      <NewTicketModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
+      <NewTicketModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 };
