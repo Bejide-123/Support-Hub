@@ -1,13 +1,19 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
-import type {  Ticket, CreateTicketData, UpdateTicketData, TicketMessage } from './ticketsApi';
-import { ticketsAPI } from './ticketsApi';
-import type { RootState } from '../../store';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+import type {
+  Ticket,
+  CreateTicketData,
+  UpdateTicketData,
+  TicketMessage,
+} from "./ticketsApi";
+import { ticketsAPI } from "./ticketsApi";
+import type { RootState } from "../../store";
 
 export interface TicketsState {
   tickets: Ticket[];
   currentTicket: Ticket | null;
   messages: TicketMessage[];
+  assignedTickets: Ticket[]
   filters: {
     status: string | null;
     priority: string | null;
@@ -27,11 +33,12 @@ export interface TicketsState {
 const initialState: TicketsState = {
   tickets: [],
   currentTicket: null,
+  assignedTickets: [],
   messages: [],
   filters: {
     status: null,
     priority: null,
-    search: '',
+    search: "",
   },
   stats: null,
   isLoading: false,
@@ -41,11 +48,11 @@ const initialState: TicketsState = {
 // Helper function to handle errors
 const handleError = (error: unknown): string => {
   if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
+  if (typeof error === "string") return error;
   try {
     return JSON.stringify(error);
   } catch {
-    return 'An unknown error occurred';
+    return "An unknown error occurred";
   }
 };
 
@@ -53,11 +60,8 @@ const handleError = (error: unknown): string => {
 
 // Fetch all tickets
 export const fetchTickets = createAsyncThunk(
-  'tickets/fetchTickets',
-  async (
-    filters: { status?: string; priority?: string } = {},
-    thunkAPI
-  ) => {
+  "tickets/fetchTickets",
+  async (filters: { status?: string; priority?: string } = {}, thunkAPI) => {
     const { rejectWithValue } = thunkAPI;
     try {
       const tickets = await ticketsAPI.fetchTickets(filters);
@@ -65,27 +69,30 @@ export const fetchTickets = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 export const fetchUserTickets = createAsyncThunk(
-  'tickets/fetchUserTickets',
+  "tickets/fetchUserTickets",
   async (userId: string, { rejectWithValue }) => {
-    try {      const tickets = await ticketsAPI.fetchUserTickets(userId);
+    try {
+      const tickets = await ticketsAPI.fetchUserTickets(userId);
       return tickets;
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 export const selectUserTickets = (state: RootState, userId: string) => {
-  return state.tickets.tickets.filter(ticket => ticket.customer_id === userId);
+  return state.tickets.tickets.filter(
+    (ticket) => ticket.customer_id === userId,
+  );
 };
 
 // Fetch a single ticket by ID
 export const fetchTicketById = createAsyncThunk(
-  'tickets/fetchTicketById',
+  "tickets/fetchTicketById",
   async (ticketId: string, { rejectWithValue }) => {
     try {
       const ticket = await ticketsAPI.fetchTicketById(ticketId);
@@ -93,38 +100,62 @@ export const fetchTicketById = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
+);
+
+export const fetchAssignedTickets = createAsyncThunk(
+  "tickets/fetchAssignedTickets",
+  async (userId: string, { rejectWithValue }) => {
+    try {
+      const tickets = await ticketsAPI.fetchAssignedTickets(userId);
+      return tickets;
+    } catch (error: unknown) {
+      if (error instanceof Error) return rejectWithValue(error.message);
+      if (typeof error === "string") return rejectWithValue(error);
+      try {
+        return rejectWithValue(JSON.stringify(error));
+      } catch {
+        return rejectWithValue("An unknown error occurred");
+      }
+    }
+  },
 );
 
 // Create a new ticket
 export const createTicket = createAsyncThunk(
-  'tickets/createTicket',
-  async ({ ticketData, userId }: { ticketData: CreateTicketData; userId: string }, { rejectWithValue }) => {
+  "tickets/createTicket",
+  async (
+    { ticketData, userId }: { ticketData: CreateTicketData; userId: string },
+    { rejectWithValue },
+  ) => {
     try {
       const ticket = await ticketsAPI.createTicket(ticketData, userId);
       return ticket;
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 // Update a ticket
 export const updateTicket = createAsyncThunk(
-  'tickets/updateTicket',
-  async ({ ticketId, updates }: { ticketId: string; updates: UpdateTicketData }, { rejectWithValue }) => {
+  "tickets/updateTicket",
+  async (
+    { ticketId, updates }: { ticketId: string; updates: UpdateTicketData },
+    { rejectWithValue },
+  ) => {
     try {
       const ticket = await ticketsAPI.updateTicket(ticketId, updates);
       return ticket;
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 // Delete a ticket
 export const deleteTicket = createAsyncThunk(
-  'tickets/deleteTicket',
+  "tickets/deleteTicket",
   async (ticketId: string, { rejectWithValue }) => {
     try {
       await ticketsAPI.deleteTicket(ticketId);
@@ -132,12 +163,12 @@ export const deleteTicket = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 // Fetch messages for a ticket
 export const fetchMessages = createAsyncThunk(
-  'tickets/fetchMessages',
+  "tickets/fetchMessages",
   async (ticketId: string, { rejectWithValue }) => {
     try {
       const messages = await ticketsAPI.fetchMessages(ticketId);
@@ -145,49 +176,49 @@ export const fetchMessages = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 // Add a message to a ticket
 export const addMessage = createAsyncThunk(
-  'tickets/addMessage',
+  "tickets/addMessage",
   async (
-    { 
-      ticketId, 
-      message, 
-      authorId, 
-      authorName, 
+    {
+      ticketId,
+      message,
+      authorId,
+      authorName,
       authorAvatar,
-      isInternal 
-    }: { 
-      ticketId: string; 
-      message: string; 
-      authorId: string; 
-      authorName: string; 
+      isInternal,
+    }: {
+      ticketId: string;
+      message: string;
+      authorId: string;
+      authorName: string;
       authorAvatar?: string;
       isInternal?: boolean;
-    }, 
-    { rejectWithValue }
+    },
+    { rejectWithValue },
   ) => {
     try {
       const newMessage = await ticketsAPI.addMessage(
-        ticketId, 
-        message, 
-        authorId, 
-        authorName, 
+        ticketId,
+        message,
+        authorId,
+        authorName,
         authorAvatar,
-        isInternal || false
+        isInternal || false,
       );
       return newMessage;
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 // Get user ticket stats
 export const getUserTicketStats = createAsyncThunk(
-  'tickets/getUserTicketStats',
+  "tickets/getUserTicketStats",
   async (userId: string, { rejectWithValue }) => {
     try {
       const stats = await ticketsAPI.getUserTicketStats(userId);
@@ -195,12 +226,12 @@ export const getUserTicketStats = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 // Get agent ticket stats
 export const getAgentTicketStats = createAsyncThunk(
-  'tickets/getAgentTicketStats',
+  "tickets/getAgentTicketStats",
   async (_, { rejectWithValue }) => {
     try {
       const stats = await ticketsAPI.getAgentTicketStats();
@@ -208,13 +239,13 @@ export const getAgentTicketStats = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(handleError(error));
     }
-  }
+  },
 );
 
 // ==================== SLICE ====================
 
 const ticketsSlice = createSlice({
-  name: 'tickets',
+  name: "tickets",
   initialState,
   reducers: {
     // Clear error
@@ -236,7 +267,7 @@ const ticketsSlice = createSlice({
       state.filters = {
         status: null,
         priority: null,
-        search: '',
+        search: "",
       };
     },
 
@@ -292,6 +323,19 @@ const ticketsSlice = createSlice({
       state.error = action.payload as string;
     });
 
+    builder.addCase(fetchAssignedTickets.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(fetchAssignedTickets.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.assignedTickets = action.payload;
+    });
+    builder.addCase(fetchAssignedTickets.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
     // ========== CREATE TICKET ==========
     builder.addCase(createTicket.pending, (state) => {
       state.isLoading = true;
@@ -313,13 +357,13 @@ const ticketsSlice = createSlice({
     });
     builder.addCase(updateTicket.fulfilled, (state, action) => {
       state.isLoading = false;
-      
+
       // Update in tickets list
-      const index = state.tickets.findIndex(t => t.id === action.payload.id);
+      const index = state.tickets.findIndex((t) => t.id === action.payload.id);
       if (index !== -1) {
         state.tickets[index] = action.payload;
       }
-      
+
       // Update current ticket if it's the same
       if (state.currentTicket?.id === action.payload.id) {
         state.currentTicket = action.payload;
@@ -337,8 +381,8 @@ const ticketsSlice = createSlice({
     });
     builder.addCase(deleteTicket.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.tickets = state.tickets.filter(t => t.id !== action.payload);
-      
+      state.tickets = state.tickets.filter((t) => t.id !== action.payload);
+
       if (state.currentTicket?.id === action.payload) {
         state.currentTicket = null;
       }
@@ -409,43 +453,50 @@ const ticketsSlice = createSlice({
 // ==================== SELECTORS ====================
 
 export const selectAllTickets = (state: RootState) => state.tickets.tickets;
-export const selectCurrentTicket = (state: RootState) => state.tickets.currentTicket;
-export const selectTicketMessages = (state: RootState) => state.tickets.messages;
-export const selectTicketsLoading = (state: RootState) => state.tickets.isLoading;
+export const selectCurrentTicket = (state: RootState) =>
+  state.tickets.currentTicket;
+export const selectTicketMessages = (state: RootState) =>
+  state.tickets.messages;
+export const selectTicketsLoading = (state: RootState) =>
+  state.tickets.isLoading;
 export const selectTicketsError = (state: RootState) => state.tickets.error;
 export const selectTicketStats = (state: RootState) => state.tickets.stats;
 export const selectTicketFilters = (state: RootState) => state.tickets.filters;
+export const selectAssignedTickets = (state: RootState) => state.tickets.assignedTickets;
 
 // Filtered tickets selector
 export const selectFilteredTickets = (state: RootState) => {
   const { tickets, filters } = state.tickets;
   const { status, priority, search } = filters;
 
-  return tickets.filter(ticket => {
+  return tickets.filter((ticket) => {
     // Status filter
     if (status && ticket.status !== status) return false;
-    
+
     // Priority filter
     if (priority && ticket.priority !== priority) return false;
-    
+
     // Search filter
-    if (search && !ticket.subject.toLowerCase().includes(search.toLowerCase()) &&
-        !ticket.description?.toLowerCase().includes(search.toLowerCase())) {
+    if (
+      search &&
+      !ticket.subject.toLowerCase().includes(search.toLowerCase()) &&
+      !ticket.description?.toLowerCase().includes(search.toLowerCase())
+    ) {
       return false;
     }
-    
+
     return true;
   });
 };
 
-export const { 
-  clearError, 
-  setStatusFilter, 
-  setPriorityFilter, 
+export const {
+  clearError,
+  setStatusFilter,
+  setPriorityFilter,
   setSearchFilter,
   clearFilters,
   clearCurrentTicket,
-  clearTicketsState 
+  clearTicketsState,
 } = ticketsSlice.actions;
 
 export default ticketsSlice.reducer;

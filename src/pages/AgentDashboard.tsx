@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import AgentNavbar from "../components/AgentNavbar";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
-import { fetchTickets, selectAllTickets, selectTicketsLoading } from "../features/Tickets/ticketsSlice";
+import { fetchTickets, selectAllTickets, selectTicketsLoading, fetchAssignedTickets, selectAssignedTickets } from "../features/Tickets/ticketsSlice";
 import { selectCurrentUser } from "../features/Auth/authSlice";
 import type { Ticket as TicketType } from "../features/Tickets/ticketsApi";
 
@@ -70,9 +70,14 @@ const AgentDashboard = () => {
   const user       = useAppSelector(selectCurrentUser);
   const allTickets = useAppSelector(selectAllTickets) as TicketType[];
   const isLoading  = useAppSelector(selectTicketsLoading);
+  const assignedTickets = useAppSelector(selectAssignedTickets)
 
   useEffect(() => {
-    if (user?.id) dispatch(fetchTickets({ status: "", priority: "" }));
+    if (user?.id){
+        dispatch(fetchTickets({ status: "", priority: "" }));
+        dispatch(fetchAssignedTickets(user.id))
+    } 
+
   }, [dispatch, user?.id]);
 
   /* derived metrics */
@@ -80,7 +85,6 @@ const AgentDashboard = () => {
   const inProg      = allTickets.filter(t => t.status === "in-progress").length;
   const unassigned  = allTickets.filter(t => !t.assigned_to || t.assigned_to === "Unassigned").length;
   const resolvedTdy = allTickets.filter(t => t.resolved_at && new Date(t.resolved_at).toDateString() === new Date().toDateString()).length;
-  const myAssigned  = allTickets.filter(t => t.assigned_to === agent.name).length;
   const totalResolved = allTickets.filter(t => t.status === "resolved").length;
 
   const METRICS = [
@@ -138,7 +142,7 @@ const AgentDashboard = () => {
               <p className="text-indigo-300 text-base font-semibold mb-1">{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</p>
               <h1 className="text-2xl font-extrabold text-white mb-1">{greeting}, {agent.name.split(" ")[0]} 👋</h1>
               <p className="text-indigo-200 text-base">
-                You have <span className="text-white font-bold">{myAssigned}</span> tickets assigned · <span className="text-white font-bold">{unassigned}</span> awaiting assignment
+                You have <span className="text-white font-bold">{assignedTickets.length}</span> tickets assigned · <span className="text-white font-bold">{unassigned}</span> awaiting assignment
               </p>
             </div>
 
@@ -301,7 +305,7 @@ const AgentDashboard = () => {
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {[
-                  { label: "Assigned", value: myAssigned, color: "text-violet-600" },
+                  { label: "Assigned", value: assignedTickets.length, color: "text-violet-600" },
                   { label: "Resolved",  value: totalResolved, color: "text-emerald-600" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-gray-50 rounded-xl p-3 border border-gray-100">

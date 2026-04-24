@@ -23,6 +23,7 @@ import {
 import DashboardNavbar from '../components/DashboardNavbar';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { selectCurrentUser, updateProfile } from '../features/Auth/authSlice';
+import { fetchUserTickets, selectUserTickets } from '../features/Tickets/ticketsSlice';
 import toast from 'react-hot-toast';
 
 const UserProfilePage = () => {
@@ -33,6 +34,7 @@ const UserProfilePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
 
   const user = useAppSelector(selectCurrentUser);
+    const tickets     = useAppSelector(s => user?.id ? selectUserTickets(s, user.id) : []);
 
   // Profile data - initialize from Redux user
   const [profile, setProfile] = useState({
@@ -69,6 +71,12 @@ const UserProfilePage = () => {
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    if(user?.id) {
+      dispatch(fetchUserTickets(user.id))
+    }
+  }, [dispatch, user?.id])
 
   // Security settings
   const [security, setSecurity] = useState({
@@ -263,7 +271,7 @@ const UserProfilePage = () => {
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
                     <Ticket size={18} className="mx-auto text-emerald-600 mb-1" />
                     <p className="text-xs text-gray-500">Tickets</p>
-                    <p className="text-lg font-bold text-gray-900">23</p>
+                    <p className="text-lg font-bold text-gray-900">{tickets.length}</p>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
                     <Star size={18} className="mx-auto text-yellow-500 mb-1" />

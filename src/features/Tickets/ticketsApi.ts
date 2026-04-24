@@ -152,6 +152,16 @@ export const ticketsAPI = {
     return data as Ticket[];
   },
 
+  fetchAssignedTickets: async (userId: string): Promise<Ticket[]> => {
+  const { data, error } = await supabase
+    .from('tickets')
+    .select('*')
+    .eq('assigned_to', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data as Ticket[];
+},
   
   // Create a new ticket
   createTicket: async (ticketData: CreateTicketData, userId: string): Promise<Ticket> => {
