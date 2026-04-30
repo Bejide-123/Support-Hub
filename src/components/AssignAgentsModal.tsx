@@ -1,15 +1,17 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search, User, UserCheck, XCircle } from 'lucide-react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { SelectAllAgents, fetchAllAgents } from '../features/Auth/authSlice';
 
-interface Agent {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  role: string;
-  ticketCount: number;
-}
+// interface Agent {
+//   id: string;
+//   name: string;
+//   email: string;
+//   avatar: string;
+//   role: string;
+//   ticketCount: number;
+// }
 
 interface AssignAgentModalProps {
   isOpen: boolean;
@@ -28,17 +30,26 @@ const AssignAgentModal = ({
 }: AssignAgentModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const dispatch = useAppDispatch()
+
+  const agents = useAppSelector(SelectAllAgents);
+
+  useEffect(() => {
+    if (isOpen) {
+      dispatch(fetchAllAgents());
+    }
+  }, [isOpen, dispatch]);
 
   // Mock agents list - replace with your actual agents from Redux/API
-  const agents: Agent[] = [
-    { id: '1', name: 'Sarah Johnson', email: 'sarah.johnson@supporthub.com', avatar: 'SJ', role: 'Senior Agent', ticketCount: 8 },
-    { id: '2', name: 'Mike Chen', email: 'mike.chen@supporthub.com', avatar: 'MC', role: 'Support Agent', ticketCount: 12 },
-    { id: '3', name: 'Emily Rodriguez', email: 'emily.rodriguez@supporthub.com', avatar: 'ER', role: 'Support Agent', ticketCount: 6 },
-    { id: '4', name: 'David Kim', email: 'david.kim@supporthub.com', avatar: 'DK', role: 'Junior Agent', ticketCount: 15 },
-    { id: '5', name: 'Lisa Patel', email: 'lisa.patel@supporthub.com', avatar: 'LP', role: 'Support Agent', ticketCount: 9 },
-    { id: '6', name: 'Alex Turner', email: 'alex.turner@supporthub.com', avatar: 'AT', role: 'Senior Agent', ticketCount: 4 },
-    { id: '7', name: 'Jessica Lee', email: 'jessica.lee@supporthub.com', avatar: 'JL', role: 'Support Agent', ticketCount: 11 },
-  ];
+  // const agents: Agent[] = [
+  //   { id: '1', name: 'Sarah Johnson', email: 'sarah.johnson@supporthub.com', avatar: 'SJ', role: 'Senior Agent', ticketCount: 8 },
+  //   { id: '2', name: 'Mike Chen', email: 'mike.chen@supporthub.com', avatar: 'MC', role: 'Support Agent', ticketCount: 12 },
+  //   { id: '3', name: 'Emily Rodriguez', email: 'emily.rodriguez@supporthub.com', avatar: 'ER', role: 'Support Agent', ticketCount: 6 },
+  //   { id: '4', name: 'David Kim', email: 'david.kim@supporthub.com', avatar: 'DK', role: 'Junior Agent', ticketCount: 15 },
+  //   { id: '5', name: 'Lisa Patel', email: 'lisa.patel@supporthub.com', avatar: 'LP', role: 'Support Agent', ticketCount: 9 },
+  //   { id: '6', name: 'Alex Turner', email: 'alex.turner@supporthub.com', avatar: 'AT', role: 'Senior Agent', ticketCount: 4 },
+  //   { id: '7', name: 'Jessica Lee', email: 'jessica.lee@supporthub.com', avatar: 'JL', role: 'Support Agent', ticketCount: 11 },
+  // ];
 
   // Filter agents based on search
   const filteredAgents = agents.filter(agent => 
@@ -134,15 +145,15 @@ const AssignAgentModal = ({
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-gray-900">{agent.name}</p>
-                          {agent.role === 'Senior Agent' && (
+                          {/* {agent.role === 'Senior Agent' && (
                             <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">Senior</span>
-                          )}
+                          )} */}
                         </div>
                         <p className="text-xs text-gray-500">{agent.email}</p>
                         <div className="flex items-center gap-3 mt-1">
                           <p className="text-xs text-gray-400">{agent.role}</p>
                           <span className="text-xs text-gray-300">•</span>
-                          <p className="text-xs text-gray-400">{agent.ticketCount} active tickets</p>
+                          <p className="text-xs text-gray-400">----- active tickets</p>
                         </div>
                       </div>
                     </div>

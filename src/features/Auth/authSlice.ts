@@ -152,6 +152,18 @@ export const getAllCustomers = createAsyncThunk(
   }
 );
 
+export const fetchAllAgents = createAsyncThunk(
+  'auth/fetchAllAgents',
+  async (_, { rejectWithValue }) => {
+    try {
+      const agents = await authAPI.fetchAllAgents();
+      return agents;
+    } catch (error: unknown) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
+
 export const getCustomerById = createAsyncThunk(
   'auth/getCustomerById',
   async (customerId: string, { rejectWithValue }) => {
@@ -294,6 +306,23 @@ const authSlice = createSlice({
       state.isLoadingData = false;
       state.error = action.payload as string;
     });
+
+    // fetch All Agents
+    builder.addCase(fetchAllAgents.pending, (state) => {
+      state.isLoadingData = true;
+      state.error = null;
+    });
+    builder.addCase(fetchAllAgents.fulfilled, (state, action) => {
+      state.isLoadingData = false;
+      // Cache all agents by ID
+      action.payload.forEach((agent) => {
+        state.users[agent.id] = agent;
+      });
+    });
+    builder.addCase(fetchAllAgents.rejected, (state, action) => {
+      state.isLoadingData = false;
+      state.error = action.payload as string;
+    });
     
     // Get Customer By ID
     builder.addCase(getCustomerById.pending, (state) => {
@@ -393,6 +422,15 @@ export const selectAllCustomers = createSelector(
   (users) => {
     return Object.values(users).filter(
       (user): user is User => user !== null && user.role === 'Customer'
+    );
+  }
+);
+
+export const SelectAllAgents = createSelector( 
+  (state: RootState) => state.auth.users,
+  (users) => {
+    return Object.values(users).filter(
+      (user): user is User => user !== null && user.role !== "Customer"
     );
   }
 );

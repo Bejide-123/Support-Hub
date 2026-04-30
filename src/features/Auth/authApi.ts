@@ -139,6 +139,17 @@ export const authAPI = {
     return data as User[];
   },
 
+  fetchAllAgents: async() => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'Agent')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as User[];  
+  },
+
   getCustomerById: async (customerId: string): Promise<User | null> => {
     const { data: profile, error } = await supabase
       .from('profiles')

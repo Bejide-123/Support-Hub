@@ -28,7 +28,7 @@ import {
   updateTicket,
 } from "../features/Tickets/ticketsSlice";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
-import { selectCurrentUser } from "../features/Auth/authSlice";
+import { selectCurrentUser, getUserById, selectUserById } from "../features/Auth/authSlice";
 import { authAPI } from "../features/Auth/authApi";
 import type { User } from "../features/Auth/authApi";
 import AssignAgentsModal from "../components/AssignAgentsModal";
@@ -167,6 +167,15 @@ const FilterCheck = ({
   </label>
 );
 
+const AssignedAgentName = ({ userId }: { userId: string }) => {
+  const agent = useAppSelector((state) => selectUserById(state, userId));
+  return (
+    <span className="text-sm text-gray-600 font-medium">
+      {agent?.name || userId}
+    </span>
+  );
+};
+
 /* ═══════════════════════════════════════════════════════════════ */
 const AgentTicketQueue = () => {
   const navigate = useNavigate();
@@ -193,6 +202,59 @@ const AgentTicketQueue = () => {
   const isLoading = useAppSelector(selectTicketsLoading);
   const ticketStats = useAppSelector(selectTicketStats);
 
+  /* derived */
+  const stats = {
+    total: tickets.length,
+    urgent: tickets.filter((t) => t.priority === "urgent").length,
+    unassigned: tickets.filter(
+      (t) => !t.assigned_to || t.assigned_to === "Unassigned",
+    ).length,
+    open: ticketStats?.open || 0,
+  };
+
+  const filtered = tickets
+    .filter((t) => {
+      const cName = customerMap[t.customer_id]?.name || "";
+      const q = searchQuery.toLowerCase();
+      return (
+        (!q ||
+          t.subject.toLowerCase().includes(q) ||
+          t.id.toLowerCase().includes(q) ||
+          cName.toLowerCase().includes(q)) &&
+        (!filters.status.length || filters.status.includes(t.status)) &&
+        (!filters.priority.length || filters.priority.includes(t.priority)) &&
+        (!filters.category.length ||
+          filters.category.includes(t.category || "")) &&
+        (viewMode === "all" ||
+          (viewMode === "unassigned" &&
+            (!t.assigned_to || t.assigned_to === "Unassigned")) ||
+          (viewMode === "assigned-to-me" && t.assigned_to === user?.id) ||
+          (viewMode === "urgent" && t.priority === "urgent"))
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === "newest")
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      if (sortBy === "oldest")
+        return (
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      if (sortBy === "priority") {
+        const order = { urgent: 0, high: 1, medium: 2, low: 3 };
+        return (
+          (order[a.priority as keyof typeof order] ?? 9) -
+          (order[b.priority as keyof typeof order] ?? 9)
+        );
+      }
+      if (sortBy === "updated")
+        return (
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        );
+      return 0;
+    });
+
   useEffect(() => {
     if (user?.id) {
       dispatch(fetchTickets({ status: "", priority: "" }));
@@ -214,6 +276,29 @@ const AgentTicketQueue = () => {
     };
     if (tickets.length > 0) fetchCustomers();
   }, [tickets]);
+
+  useEffect(() => {
+    const fetchAssignedAgents = () => {
+      const agentIdsToFetch = new Set<string>();
+      filtered.forEach((ticket) => {
+        if (
+          ticket.assigned_to &&
+          ticket.assigned_to !== "Unassigned" &&
+          ticket.assigned_to !== user?.id
+        ) {
+          agentIdsToFetch.add(ticket.assigned_to);
+        }
+      });
+
+      agentIdsToFetch.forEach((agentId) => {
+        dispatch(getUserById(agentId));
+      });
+    };
+
+    if (filtered.length > 0) {
+      fetchAssignedAgents();
+    }
+  }, [dispatch, filtered, user?.id]);
 
   /* handlers */
   const handleAssignTickets = async (agentId: string) => {
@@ -281,58 +366,7 @@ const AgentTicketQueue = () => {
         : [...prev[key], val],
     }));
 
-  /* derived */
-  const stats = {
-    total: tickets.length,
-    urgent: tickets.filter((t) => t.priority === "urgent").length,
-    unassigned: tickets.filter(
-      (t) => !t.assigned_to || t.assigned_to === "Unassigned",
-    ).length,
-    open: ticketStats?.open || 0,
-  };
-
-  const filtered = tickets
-    .filter((t) => {
-      const cName = customerMap[t.customer_id]?.name || "";
-      const q = searchQuery.toLowerCase();
-      return (
-        (!q ||
-          t.subject.toLowerCase().includes(q) ||
-          t.id.toLowerCase().includes(q) ||
-          cName.toLowerCase().includes(q)) &&
-        (!filters.status.length || filters.status.includes(t.status)) &&
-        (!filters.priority.length || filters.priority.includes(t.priority)) &&
-        (!filters.category.length ||
-          filters.category.includes(t.category || "")) &&
-        (viewMode === "all" ||
-          (viewMode === "unassigned" &&
-            (!t.assigned_to || t.assigned_to === "Unassigned")) ||
-          (viewMode === "assigned-to-me" && t.assigned_to === user?.id) ||
-          (viewMode === "urgent" && t.priority === "urgent"))
-      );
-    })
-    .sort((a, b) => {
-      if (sortBy === "newest")
-        return (
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      if (sortBy === "oldest")
-        return (
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
-      if (sortBy === "priority") {
-        const order = { urgent: 0, high: 1, medium: 2, low: 3 };
-        return (
-          (order[a.priority as keyof typeof order] ?? 9) -
-          (order[b.priority as keyof typeof order] ?? 9)
-        );
-      }
-      if (sortBy === "updated")
-        return (
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        );
-      return 0;
-    });
+  
 
   const activeFilterCount =
     filters.status.length +
@@ -824,9 +858,7 @@ const AgentTicketQueue = () => {
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-600 font-medium">
-                                {ticket.assigned_to}
-                              </span>
+                              <AssignedAgentName userId={ticket.assigned_to} />
                             )}
                           </td>
 

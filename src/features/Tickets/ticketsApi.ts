@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/Supabase';
+import type { UploadedFile } from '../../utils/uploadFile';
 
 export interface Ticket {
   id: string;
@@ -27,6 +28,7 @@ export interface CreateTicketData {
   category?: string;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   ticket_number : string;
+  attachments?: UploadedFile[];
 }
 
 export interface UpdateTicketData {
@@ -175,6 +177,7 @@ export const ticketsAPI = {
         ticket_number: ticketData.ticket_number,
         status: 'open',
         customer_id: userId,
+        attachments: ticketData.attachments || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }])
