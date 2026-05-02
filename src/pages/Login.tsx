@@ -16,6 +16,8 @@ import {
   Facebook,
   ArrowRight
 } from 'lucide-react';
+import { showSuccess, showError, showLoading, } from '../components/CustomToast';
+import toast from 'react-hot-toast';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -69,6 +71,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const loadingId = showLoading('Logging in...');
     try {
       const resultAction = await dispatch(login(formData)).unwrap();
       
@@ -80,13 +83,19 @@ const LoginPage = () => {
         const role = resultAction.role.toString().toLowerCase();
         if (role.includes('agent')) {
           navigate('/agent/dashboard', { replace: true });
+
         } else {
           navigate('/dashboard', { replace: true });
         }
       }
+      showSuccess('Login successful! Redirecting...');
     } catch (err) {
       // Error handled by authSlice, no need to re-throw or set here
       console.error('Login failed:', err);
+      showError('Login failed', err instanceof Error ? err.message : 'An error occurred');
+      setTimeout(() => {
+        toast.dismiss(loadingId);
+      }, 500); // Dismiss after a short delay to allow the error toast to show
     }
   };
 

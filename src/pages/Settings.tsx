@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import AgentNavbar from '../components/AgentNavbar';
 
+
 const AgentSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isSaving, setIsSaving] = useState(false);

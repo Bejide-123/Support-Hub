@@ -1,4 +1,5 @@
 import { Toaster } from 'react-hot-toast'; // Added Toaster import
+import { toastContainerStyle } from './components/CustomToast';
 import HeroSection from "./components/Hero";
 import KnowledgeBaseSection from "./components/KnowledgeBase";
 import FAQSection from "./components/FAQsection";
@@ -43,7 +44,7 @@ const App = () => {
 
   return (
     <>
-      <Toaster /> {/* Added Toaster component */}
+      <Toaster {...toastContainerStyle} /> {/* Added Toaster component */}
       <Routes>
         {/* Public Routes - No Auth Required */}
         <Route
