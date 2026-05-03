@@ -1,4 +1,3 @@
-// src/pages/SignupPage.tsx
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -18,6 +17,7 @@ import {
   Twitter,
   Facebook
 } from 'lucide-react';
+import { showInfo, showPromiseToast } from '../components/CustomToast';
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -61,20 +61,48 @@ const SignupPage = () => {
     // Validation
     if (formData.password !== formData.confirmPassword) {
       setValidationError('Passwords do not match');
+      showInfo("Passwords don't match", 'Please make sure both password fields are the same');
       return;
     }
 
     if (formData.password.length < 8) {
       setValidationError('Password must be at least 8 characters');
+      showInfo('Weak Password', 'Password should be at least 8 characters long');
       return;
     }
 
     if (!agreedToTerms) {
       setValidationError('Please agree to the terms of service');
+      showInfo('Terms not accepted', 'You must agree to the terms of service to create an account');
       return;
     }
 
-    dispatch(signup(formData));
+    try {
+      // Use showPromiseToast for the signup operation
+      await showPromiseToast(
+        dispatch(signup(formData)).unwrap(),
+        {
+          loading: 'Creating your account...',
+          success: 'Signup successful! 🎉',
+          error: 'Signup failed'
+        },
+        'Welcome to SupportHub! You will be redirected shortly.'
+      );
+      
+      // Reset form on success
+      setFormData({
+        name: '',
+        email: '',
+        company: '',
+        password: '',
+        confirmPassword: ''
+      });
+      setAgreedToTerms(false);
+      
+    } catch (err) {
+      // Error is already handled by showPromiseToast
+      console.error('Signup error:', err);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +110,8 @@ const SignupPage = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear validation error when user types
+    if (validationError) setValidationError('');
   };
 
   // Password strength checker
