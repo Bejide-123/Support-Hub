@@ -17,6 +17,8 @@ import { selectCurrentUser, getUserById, selectUserById } from "../features/Auth
 import { authAPI } from "../features/Auth/authApi";
 import type { User } from "../features/Auth/authApi";
 import AssignAgentsModal from "../components/AssignAgentsModal";
+import { showSuccess, showError, showLoading } from '../components/CustomToast'
+
 
 /* ── design tokens (matching AgentDashboard) ─────────────────── */
 
@@ -171,17 +173,21 @@ const AgentTicketQueue = () => {
     }
     dispatch(fetchTickets({ status: "", priority: "" }));
     setSelectedTickets([]); setSelectedTicketIds([]);
-    toast.success("Tickets assigned successfully!");
+    showSuccess("Tickets assigned successfully!");
   };
 
   const handleAssignToMe = async (ticketId: string, e: React.MouseEvent) => {
+    const loadingId = showLoading("Assigning ticket to you…");
     e.stopPropagation();
-    if (!user?.id) return toast.error("User not logged in.");
+    if (!user?.id) return ( showError("User not logged in."), setTimeout(() => { toast.dismiss(loadingId) }, 500) );
     try {
       await dispatch(updateTicket({ ticketId, updates: { assigned_to: user.id } }));
-      toast.success("Ticket assigned to you!");
+      showSuccess("Ticket assigned to you!");
+      setTimeout(() => { toast.dismiss(loadingId) }, 500);
       dispatch(fetchTickets({ status: "", priority: "" }));
-    } catch { toast.error("Failed to assign ticket."); }
+    } catch { showError("Failed to assign ticket.");
+      setTimeout(() => { toast.dismiss(loadingId) }, 500);
+    }
   };
 
   const toggleTicket = (id: string) =>

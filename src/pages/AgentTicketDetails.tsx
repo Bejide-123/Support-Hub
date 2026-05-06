@@ -17,8 +17,8 @@ import {
   selectCurrentTicket, selectTicketMessages, selectTicketsLoading
 } from '../features/Tickets/ticketsSlice';
 import { selectCurrentUser, getUserById, selectUserById } from '../features/Auth/authSlice';
+import { showSuccess, showError, showLoading } from '../components/CustomToast';
 import toast from 'react-hot-toast';
-
 /* ── Config maps ──────────────────────────────────────────────── */
 
 const STATUS_CFG: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
@@ -164,9 +164,9 @@ const AgentTicketDetailPage = () => {
   const mappedStatus = map[s] ?? s as 'open' | 'in-progress' | 'resolved' | 'closed';
   try { 
     await dispatch(updateTicket({ ticketId: id!, updates: { status: mappedStatus } })).unwrap(); 
-    toast.success(`Status → ${s}`); 
+    showSuccess(`Status → ${s}`);
   } catch { 
-    toast.error('Failed'); 
+    showError('Failed'); 
   }
   setDd(null);
 };
@@ -177,31 +177,32 @@ const changePriority = async (p: string) => {
   
   // Optional: Validate that p is a valid priority
   if (!validPriorities.includes(mappedPriority)) {
-    toast.error('Invalid priority');
+    showError('Invalid priority');
     return;
   }
   
   try { 
     await dispatch(updateTicket({ ticketId: id!, updates: { priority: mappedPriority } })).unwrap(); 
-    toast.success(`Priority → ${p}`); 
+    showSuccess(`Priority → ${p}`); 
   } catch { 
-    toast.error('Failed'); 
+    showError('Failed'); 
   }
   setDd(null);
 };
 
   const assignToMe = async () => {
-    try { await dispatch(updateTicket({ ticketId: id!, updates: { assigned_to: currentUser?.name } })).unwrap(); toast.success('Assigned to you'); }
-    catch { toast.error('Failed'); }
+    try { await dispatch(updateTicket({ ticketId: id!, updates: { assigned_to: currentUser?.name } })).unwrap(); showSuccess('Assigned to you'); }
+    catch { showError('Failed'); }
     setDd(null);
   };
 
   const markResolved = async () => {
-    try { await dispatch(updateTicket({ ticketId: id!, updates: { status: 'resolved' } })).unwrap(); toast.success('Ticket resolved'); }
-    catch { toast.error('Failed'); }
+    try { await dispatch(updateTicket({ ticketId: id!, updates: { status: 'resolved' } })).unwrap(); showSuccess('Ticket resolved'); }
+    catch { showError('Failed'); }
   };
 
   const handleSend = async (e: React.FormEvent) => {
+    const loadingId = showLoading('Sending message…');
     e.preventDefault();
     if (!msg.trim() && files.length === 0) return;
     setSending(true);
@@ -212,8 +213,12 @@ const changePriority = async (p: string) => {
         authorAvatar: currentUser!.avatar, isInternal: false,
       })).unwrap();
       setMsg(''); setFiles([]); setReplyTo(null);
-    } catch { toast.error('Failed to send'); }
-    finally { setSending(false); }
+    } catch { showError('Failed to send'); }
+    finally { setSending(false); 
+      setTimeout(() => {
+        toast.dismiss(loadingId)
+      }, 500);
+    }
   };
 
   const handleNote = async (e: React.FormEvent) => {
@@ -225,8 +230,8 @@ const changePriority = async (p: string) => {
         authorId: currentUser!.id, authorName: currentUser!.name,
         authorAvatar: currentUser!.avatar, isInternal: true,
       })).unwrap();
-      setNote(''); setShowNote(false); toast.success('Note saved');
-    } catch { toast.error('Failed'); }
+      setNote(''); setShowNote(false); showSuccess('Note saved');
+    } catch { showError('Failed'); }
   };
 
   const doSnooze = async (dur: string) => {
@@ -234,8 +239,8 @@ const changePriority = async (p: string) => {
     if (dur === '1h')       d.setHours(d.getHours() + 1);
     if (dur === '4h')       d.setHours(d.getHours() + 4);
     if (dur === 'tomorrow') d.setDate(d.getDate() + 1);
-    try { await dispatch(updateTicket({ ticketId: id!, updates: { snoozed_until: d.toISOString() } })).unwrap(); toast.success(`Snoozed until ${d.toLocaleTimeString()}`); }
-    catch { toast.error('Failed'); }
+    try { await dispatch(updateTicket({ ticketId: id!, updates: { snoozed_until: d.toISOString() } })).unwrap(); showSuccess(`Snoozed until ${d.toLocaleTimeString()}`); }
+    catch { showError('Failed'); }
     setSnooze(false);
   };
 
