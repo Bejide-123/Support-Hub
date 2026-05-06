@@ -27,6 +27,11 @@ import {
   CircleDot,
   Circle,
   MinusCircle,
+  FileImage,
+  FileText,
+  Download,
+  Eye,
+  X,
 } from 'lucide-react';
 import DashboardNavbar from '../components/DashboardNavbar';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -39,6 +44,7 @@ import {
   selectTicketMessages,
   selectTicketsLoading,
   clearCurrentTicket,
+  fetchUserTickets, selectUserTickets
 } from '../features/Tickets/ticketsSlice';
 import { selectCurrentUser, getUserById, selectUserById } from '../features/Auth/authSlice';
 import toast from 'react-hot-toast';
@@ -103,7 +109,150 @@ interface Attachment {
   name: string;
   size: string;
   url: string;
+  type?: string;
+  path?: string;
 }
+
+/* ── Parse attachments — handles both JSON string and array ──── */
+function parseAttachments(raw: unknown): Attachment[] {
+  if (!raw) return [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/* ── File type helpers ───────────────────────────────────────── */
+const isImage = (type?: string) => type?.startsWith('image/');
+const isPDF   = (type?: string) => type === 'application/pdf';
+
+const fileIcon = (type?: string) => {
+  if (isImage(type)) return <FileImage size={16} className="text-sky-500" />;
+  if (isPDF(type))   return <FileText  size={16} className="text-red-500" />;
+  return                    <File      size={16} className="text-gray-400" />;
+};
+
+const fileBg = (type?: string) => {
+  if (isImage(type)) return 'bg-sky-50 border-sky-100';
+  if (isPDF(type))   return 'bg-red-50 border-red-100';
+  return                    'bg-gray-50 border-gray-100';
+};
+
+/* ── AttachmentsPanel ────────────────────────────────────────── */
+const AttachmentsPanel = ({ attachments }: { attachments: Attachment[] }) => {
+  const [lightbox, setLightbox] = useState<Attachment | null>(null);
+
+  if (attachments.length === 0) return null;
+
+  return (
+    <>
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <Paperclip size={11} />
+          Attachments
+          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-[10px] font-bold">
+            {attachments.length}
+          </span>
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {attachments.map((att, i) => (
+            <div key={i}
+              className={`relative group rounded-xl border overflow-hidden ${fileBg(att.type)} transition-all hover:shadow-sm`}>
+
+              {/* Image preview */}
+              {isImage(att.type) ? (
+                <div
+                  className="aspect-video bg-gray-100 relative overflow-hidden cursor-pointer"
+                  onClick={() => setLightbox(att)}>
+                  <img
+                    src={att.url}
+                    alt={att.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                    <Eye size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+
+              ) : isPDF(att.type) ? (
+                /* PDF tile */
+                <div
+                  className="aspect-video flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-red-50"
+                  onClick={() => window.open(att.url, '_blank')}>
+                  <FileText size={28} className="text-red-400" />
+                  <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">PDF</span>
+                </div>
+
+              ) : (
+                /* Generic file tile */
+                <div
+                  className="aspect-video flex flex-col items-center justify-center gap-1.5 cursor-pointer"
+                  onClick={() => window.open(att.url, '_blank')}>
+                  {fileIcon(att.type)}
+                  <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
+                    {att.type?.split('/')[1] || 'file'}
+                  </span>
+                </div>
+              )}
+
+              {/* Footer row */}
+              <div className="px-2.5 py-2 flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold text-gray-700 truncate">{att.name}</p>
+                  <p className="text-[10px] text-gray-400">{att.size}</p>
+                </div>
+                <a
+                  href={att.url}
+                  download={att.name}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors flex-shrink-0">
+                  <Download size={12} />
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Lightbox for images */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}>
+          <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setLightbox(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white flex items-center gap-1.5 text-sm font-medium">
+              <X size={16} /> Close
+            </button>
+            <img
+              src={lightbox.url}
+              alt={lightbox.name}
+              className="w-full h-full object-contain rounded-xl shadow-2xl max-h-[80vh]"
+            />
+            <div className="flex items-center justify-between mt-3">
+              <p className="text-white/80 text-sm font-medium truncate">{lightbox.name}</p>
+              <a
+                href={lightbox.url}
+                download={lightbox.name}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg transition-colors flex-shrink-0 ml-3">
+                <Download size={13} /> Download
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 /* ─── Main Component ─────────────────────────────────────────── */
 const TicketDetailPage = () => {
@@ -126,6 +275,7 @@ const TicketDetailPage = () => {
   const messages    = useAppSelector(selectTicketMessages);
   const isLoading   = useAppSelector(selectTicketsLoading);
   const currentUser = useAppSelector(selectCurrentUser);
+  const tickets     = useAppSelector(s => currentUser?.id ? selectUserTickets(s, currentUser.id) : []);
 
   const assignedAgent = useAppSelector(state => ticket?.assigned_to ? selectUserById(state, ticket.assigned_to) : null);
   const customer = useAppSelector(state => ticket?.customer_id ? selectUserById(state, ticket.customer_id) : null);
@@ -133,6 +283,7 @@ const TicketDetailPage = () => {
   useEffect(() => {
     if (ticket?.customer_id && !customer) {
       dispatch(getUserById(ticket.customer_id));
+      dispatch(fetchUserTickets(ticket.customer_id));
     }
   }, [dispatch, ticket?.customer_id, customer]);
 
@@ -153,6 +304,9 @@ const TicketDetailPage = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Parse attachments from ticket
+  const ticketAttachments = parseAttachments(ticket?.attachments);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return;
@@ -293,12 +447,15 @@ const TicketDetailPage = () => {
               {/* Title row */}
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="flex-1 min-w-0">
+                  <div className="gap-2 flex items-center mb-1">
+                    <h1 className="text-xl font-bold text-gray-900 leading-tight">{ticket.subject}</h1>
+                  </div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-mono font-semibold text-gray-400 tracking-wider">
                       #{ticket.ticket_number || ticket.id.slice(0, 8).toUpperCase()}
                     </span>
                   </div>
-                  <h1 className="text-xl font-bold text-gray-900 leading-tight">{ticket.subject}</h1>
+                  
                   <div className="flex flex-wrap items-center gap-2 mt-3">
                     <StatusBadge status={ticket.status} />
                     <PriorityBadge priority={ticket.priority} />
@@ -388,6 +545,9 @@ const TicketDetailPage = () => {
                   <span className="text-xs text-gray-500">Category: <span className="text-gray-700 font-medium">{ticket.category}</span></span>
                 </div>
               )}
+
+              {/* Attachments */}
+              <AttachmentsPanel attachments={ticketAttachments} />
             </div>
 
             {/* ── Conversation ─────────────────────────────── */}
@@ -579,7 +739,7 @@ const TicketDetailPage = () => {
               <div className="border-t border-gray-100 pt-3 space-y-2.5">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">Total Tickets</span>
-                  <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">12</span>
+                  <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">{tickets.length}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">Member Since</span>

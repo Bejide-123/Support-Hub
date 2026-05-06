@@ -10,7 +10,7 @@ import {
 import AgentNavbar from "../components/AgentNavbar";
 import {
   fetchTickets, selectAllTickets, selectTicketsLoading,
-  selectTicketStats, getUserTicketStats, updateTicket,
+  getUserTicketStats, updateTicket,
 } from "../features/Tickets/ticketsSlice";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { selectCurrentUser, getUserById, selectUserById } from "../features/Auth/authSlice";
@@ -142,7 +142,6 @@ const AgentTicketQueue = () => {
   const user        = useAppSelector(selectCurrentUser);
   const tickets     = useAppSelector(selectAllTickets);
   const isLoading   = useAppSelector(selectTicketsLoading);
-  const ticketStats = useAppSelector(selectTicketStats);
 
   useEffect(() => {
     if (user?.id) {
@@ -213,7 +212,7 @@ const AgentTicketQueue = () => {
     total:      tickets.length,
     urgent:     tickets.filter(t => t.priority === "urgent").length,
     unassigned: tickets.filter(t => !t.assigned_to || t.assigned_to === "Unassigned").length,
-    open:       ticketStats?.open || 0,
+    open:       tickets.filter(t => t.status === "open").length,
   };
 
   const filtered = tickets
